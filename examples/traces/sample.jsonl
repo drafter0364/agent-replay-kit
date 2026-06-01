@@ -1,0 +1,5 @@
+{"type":"session_start","schemaVersion":"1.0","sessionId":"session_sample","agent":"sample-agent","seq":1,"timestamp":"2026-01-01T00:00:00.000Z"}
+{"type":"model_message","sessionId":"session_sample","role":"assistant","content":"I will run the test command before reporting status.","seq":2,"timestamp":"2026-01-01T00:00:01.000Z"}
+{"type":"tool_call","sessionId":"session_sample","callId":"call_sample_1","tool":"shell","args":{"command":"npm test"},"seq":3,"timestamp":"2026-01-01T00:00:02.000Z"}
+{"type":"tool_result","sessionId":"session_sample","callId":"call_sample_1","tool":"shell","ok":true,"result":{"exitCode":0,"stdout":"tests passed"},"durationMs":250,"seq":4,"timestamp":"2026-01-01T00:00:03.000Z"}
+{"type":"session_end","sessionId":"session_sample","ok":true,"summary":"Sample run completed.","durationMs":3000,"seq":5,"timestamp":"2026-01-01T00:00:04.000Z"}

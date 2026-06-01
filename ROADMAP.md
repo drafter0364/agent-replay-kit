@@ -1,0 +1,22 @@
+# Roadmap
+
+## 0.1.x
+
+- Stabilize the JSONL trace schema.
+- Improve sanitizer coverage and tests.
+- Add more CI assertion predicates.
+- Add process-level CLI tests after build.
+
+## 0.2.x
+
+- Add an OpenAI Agents SDK adapter.
+- Add a LangChain adapter.
+- Add MCP client/server trace examples.
+- Add OpenTelemetry export.
+
+## Later
+
+- HTML trace viewer.
+- Trace compression and attachment handling.
+- GitHub Action wrapper.
+- Structured policy files for assertion suites.

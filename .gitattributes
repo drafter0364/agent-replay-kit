@@ -1,0 +1,12 @@
+* text=auto
+*.ts text eol=lf
+*.mjs text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.jsonl text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+.gitignore text eol=lf
+.npmignore text eol=lf
+.gitattributes text eol=lf
+LICENSE text eol=lf

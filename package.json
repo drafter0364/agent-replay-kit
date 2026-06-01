@@ -1,0 +1,61 @@
+{
+  "name": "agent-replay-kit",
+  "version": "0.1.0",
+  "description": "Trace, replay, diff, sanitize, and regression-test tool-using AI agents.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "agent-replay": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "docs",
+    "examples",
+    "README.md",
+    "README.zh-CN.md",
+    "CHANGELOG.md",
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
+    "ROADMAP.md",
+    "SECURITY.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "check": "npm run lint && npm test && npm run build",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepack": "npm run build"
+  },
+  "keywords": [
+    "ai-agents",
+    "llm",
+    "agent-observability",
+    "replay",
+    "testing",
+    "tool-calling",
+    "trace",
+    "ai-infra"
+  ],
+  "author": "Agent Replay Kit contributors",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.0",
+    "typescript": "^5.9.0",
+    "vitest": "^4.0.0"
+  }
+}
