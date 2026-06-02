@@ -61,6 +61,7 @@ export {
   testGoldenTraceRegressionFiles,
   type GoldenTraceRegressionReport
 } from "./regression.js";
+export { exportTraceFileToOtel, exportTraceToOtel, type OtelSpanLike, type OtelSpanStatus, type OtelTraceExport } from "./otel.js";
 export {
   sanitizeTraceEvents,
   sanitizeTraceEventsWithReport,

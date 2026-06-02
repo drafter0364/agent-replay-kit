@@ -11,6 +11,7 @@ import type { JsonValue } from "./types.js";
 import { renderTraceValidationMarkdown, validateTraceFile } from "./validation.js";
 import { mergeAssertionConfigs, readAssertionPolicyFile } from "./policy.js";
 import { renderGoldenTraceRegressionMarkdown, testGoldenTraceRegressionFiles } from "./regression.js";
+import { exportTraceFileToOtel } from "./otel.js";
 
 interface CliIo {
   stdout: (text: string) => void;
@@ -34,6 +35,7 @@ Commands:
   test --baseline golden.jsonl --actual current.jsonl [--policy policy.json]
   validate trace.jsonl [--format markdown|json]
   inspect trace.jsonl [--format markdown|json]
+  export-otel trace.jsonl
 `;
 
 export async function runCli(argv: string[], io: CliIo = defaultIo): Promise<number> {
@@ -63,6 +65,8 @@ export async function runCli(argv: string[], io: CliIo = defaultIo): Promise<num
         return await runValidate(parsed, io);
       case "inspect":
         return await runInspect(parsed, io);
+      case "export-otel":
+        return await runExportOtel(parsed, io);
       default:
         io.stderr(`Unknown command: ${parsed.command}\n`);
         io.stderr(helpText);
@@ -219,6 +223,12 @@ async function runInspect(parsed: ParsedArgs, io: CliIo): Promise<number> {
   }
   const summary = await summarizeTraceFile(trace);
   io.stdout(format === "json" ? JSON.stringify(summary, null, 2) + "\n" : renderTraceSummaryMarkdown(summary));
+  return 0;
+}
+
+async function runExportOtel(parsed: ParsedArgs, io: CliIo): Promise<number> {
+  const trace = requiredPositional(parsed, 0, "trace file");
+  io.stdout(JSON.stringify(await exportTraceFileToOtel(trace), null, 2) + "\n");
   return 0;
 }
 
