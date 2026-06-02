@@ -105,6 +105,8 @@ agent-replay verify-integrity sealed.jsonl [--format markdown|json]
 
 第一版不绑定特定 Agent 框架，也不提供 Web UI 或数据库存储。项目优先保证 trace schema、SDK、CLI、脱敏和断言能力稳定可测。
 
+以 `.jsonl.gz` 结尾的 trace 文件会按 gzip 压缩格式读写。
+
 后续可以扩展 OpenAI Agents SDK、LangChain、MCP、OpenTelemetry 和 HTML trace viewer。
 
 `examples/mcp-tool-wrapper.mjs` 提供了一个不依赖 MCP SDK 的 MCP-style adapter 示例。

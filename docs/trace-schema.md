@@ -2,6 +2,8 @@
 
 Agent Replay Kit stores traces as newline-delimited JSON. Each line is one event. The first stable schema version is `1.0`.
 
+Trace files may also be gzip-compressed when the filename ends with `.jsonl.gz`.
+
 ## Event types
 
 ### `session_start`

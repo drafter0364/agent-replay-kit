@@ -34,7 +34,7 @@ export {
   type ParsedTraceValidationReport,
   type ValidateTraceTextOptions
 } from "./validation.js";
-export { appendTraceEvent, ensureParentDir, readTraceFile, writeTraceFile } from "./io.js";
+export { appendTraceEvent, ensureParentDir, readTraceFile, readTraceFileStream, writeTraceFile } from "./io.js";
 export { createRecorder, TraceRecorder, type RecorderOptions, type SessionEndOptions } from "./recorder.js";
 export {
   collectToolInteractions,

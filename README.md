@@ -116,6 +116,8 @@ Traces are newline-delimited JSON. Each line is one event:
 
 See [docs/trace-schema.md](docs/trace-schema.md) for the event model.
 
+Files ending in `.jsonl.gz` are read and written as gzip-compressed traces.
+
 ## Project status
 
 This project is an early infrastructure toolkit. The current release focuses on a framework-neutral trace format and deterministic local workflows. Framework adapters are intentionally not part of the first version so the core stays small and auditable.
