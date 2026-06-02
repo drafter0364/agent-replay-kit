@@ -73,4 +73,19 @@ describe("TraceRecorder", () => {
       expect(events.map((event) => event.seq)).toEqual([1, 2, 3, 4]);
     });
   });
+
+  it("allows adapters to preserve framework call ids", async () => {
+    await withTempDir(async (dir) => {
+      const tracePath = join(dir, "trace.jsonl");
+      const recorder = createRecorder(tracePath, { sessionId: "session_adapter" });
+
+      await recorder.start();
+      await recorder.tool("mcp.read_file", { path: "README.md" }, () => "ok", { framework: "mcp" }, "mcp_call_1");
+      await recorder.end({ ok: true });
+
+      const events = await readTraceFile(tracePath);
+      expect(events[1]).toMatchObject({ type: "tool_call", callId: "mcp_call_1", metadata: { framework: "mcp" } });
+      expect(events[2]).toMatchObject({ type: "tool_result", callId: "mcp_call_1" });
+    });
+  });
 });

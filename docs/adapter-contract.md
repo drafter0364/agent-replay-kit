@@ -90,6 +90,8 @@ const result = await recorder.tool(
 await recorder.end({ ok: true });
 ```
 
+See `examples/mcp-tool-wrapper.mjs` for a runnable MCP-style tool adapter example that does not require an MCP SDK dependency.
+
 ## Error mapping
 
 When a framework tool fails, adapters should still emit a `tool_result` event:

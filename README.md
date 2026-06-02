@@ -124,6 +124,8 @@ Good first contributions:
 - Trace adapters for specific agent runtimes.
 - Example traces from real open-source maintenance workflows.
 
+See `examples/mcp-tool-wrapper.mjs` for a framework-neutral MCP-style adapter example.
+
 ## Development
 
 ```bash

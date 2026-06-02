@@ -104,6 +104,8 @@ agent-replay inspect trace.jsonl [--format markdown|json|timeline-json]
 
 后续可以扩展 OpenAI Agents SDK、LangChain、MCP、OpenTelemetry 和 HTML trace viewer。
 
+`examples/mcp-tool-wrapper.mjs` 提供了一个不依赖 MCP SDK 的 MCP-style adapter 示例。
+
 ## 开发
 
 ```bash

@@ -68,10 +68,10 @@ export class TraceRecorder {
     tool: string,
     args: JsonValue,
     run: () => Promise<T> | T,
-    metadata?: JsonObject
+    metadata?: JsonObject,
+    callId = createId("call")
   ): Promise<T> {
     this.assertRecording("tool");
-    const callId = createId("call");
     await this.toolCall(tool, args, callId, metadata);
 
     const started = Date.now();
