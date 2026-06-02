@@ -10,3 +10,4 @@
 - Added sanitizer validation and redaction reports.
 - Added JSON assertion policies and safer forbidden command rules.
 - Added semantic trace diffing and golden trace regression testing.
+- Improved trace file I/O diagnostics and CLI JSON parse errors.

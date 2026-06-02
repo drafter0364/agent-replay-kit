@@ -39,6 +39,21 @@ describe("CLI", () => {
     });
   });
 
+  it("prints help and reports common argument errors", async () => {
+    const output: string[] = [];
+    const io = { stdout: (text: string) => output.push(text), stderr: (text: string) => output.push(text) };
+
+    await expect(runCli(["--help"], io)).resolves.toBe(0);
+    await expect(runCli(["unknown"], io)).resolves.toBe(2);
+    await expect(runCli(["record", "--out", "trace.jsonl"], io)).resolves.toBe(1);
+    await expect(runCli(["record", "--out", "trace.jsonl", "--tool", "shell", "--args-json", "{"], io)).resolves.toBe(1);
+
+    expect(output.join("")).toContain("agent-replay <command>");
+    expect(output.join("")).toContain("Unknown command");
+    expect(output.join("")).toContain("Missing --tool");
+    expect(output.join("")).toContain("Failed to parse --args-json");
+  });
+
   it("returns failing exit codes for changed diffs and failed assertions", async () => {
     await withTempDir(async (dir) => {
       const one = join(dir, "one.jsonl");

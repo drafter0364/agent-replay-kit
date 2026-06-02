@@ -256,7 +256,11 @@ function parseJsonOption(parsed: ParsedArgs, name: string, fallback: JsonValue):
   if (value === undefined) {
     return fallback;
   }
-  return JSON.parse(value) as JsonValue;
+  try {
+    return JSON.parse(value) as JsonValue;
+  } catch (error) {
+    throw new Error(`Failed to parse --${name}: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 function parseDiffMode(value: string): "positional" | "semantic" {
