@@ -39,6 +39,32 @@ describe("CLI", () => {
     });
   });
 
+  it("passes sanitizer URL allowlist hosts through the CLI", async () => {
+    await withTempDir(async (dir) => {
+      const tracePath = join(dir, "trace.jsonl");
+      const sanitizedPath = join(dir, "public.jsonl");
+      const io = { stdout: (_text: string) => undefined, stderr: (_text: string) => undefined };
+
+      await runCli(
+        [
+          "record",
+          "--out",
+          tracePath,
+          "--tool",
+          "http",
+          "--args-json",
+          "{\"url\":\"https://github.com/drafter0364/agent-replay-kit\"}",
+          "--result-json",
+          "{\"ok\":true}"
+        ],
+        io
+      );
+      await expect(runCli(["sanitize", tracePath, "--out", sanitizedPath, "--allow-url-host", "github.com"], io)).resolves.toBe(0);
+
+      expect(JSON.stringify(await readTraceFile(sanitizedPath))).toContain("https://github.com/drafter0364/agent-replay-kit");
+    });
+  });
+
   it("prints help and reports common argument errors", async () => {
     const output: string[] = [];
     const io = { stdout: (text: string) => output.push(text), stderr: (text: string) => output.push(text) };

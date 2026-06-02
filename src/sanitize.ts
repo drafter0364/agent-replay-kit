@@ -13,6 +13,7 @@ export interface SanitizerRule {
 
 export interface SanitizerOptions {
   rules?: SanitizerRule[];
+  allowedUrlHosts?: string[];
 }
 
 export interface SanitizerRedaction {
@@ -48,10 +49,13 @@ export function sanitizeTraceEvents(events: TraceEvent[], options: SanitizerOpti
 }
 
 export function sanitizeTraceEventsWithReport(events: TraceEvent[], options: SanitizerOptions = {}): SanitizedTrace {
-  const rules = [...defaultRules, ...(options.rules ?? [])];
+  const context: SanitizerContext = {
+    rules: [...defaultRules, ...(options.rules ?? [])],
+    allowedUrlHosts: new Set((options.allowedUrlHosts ?? []).map((host) => host.toLowerCase()))
+  };
   const redactions: SanitizerRedaction[] = [];
   const sanitizedEvents = events.map((event, index) => {
-    const sanitized = sanitizeValue(event, rules, `$[${index}]`);
+    const sanitized = sanitizeValue(event, context, `$[${index}]`);
     redactions.push(...sanitized.redactions);
     return sanitized.value as unknown as TraceEvent;
   });
@@ -82,7 +86,12 @@ export async function sanitizeTraceFile(inputPath: string, outputPath: string, o
   return sanitized.report;
 }
 
-function sanitizeValue(value: unknown, rules: SanitizerRule[], path: string, key?: string): { value: JsonValue; redactions: SanitizerRedaction[] } {
+interface SanitizerContext {
+  rules: SanitizerRule[];
+  allowedUrlHosts: Set<string>;
+}
+
+function sanitizeValue(value: unknown, context: SanitizerContext, path: string, key?: string): { value: JsonValue; redactions: SanitizerRedaction[] } {
   if (key && sensitiveKey.test(key)) {
     return {
       value: "[REDACTED]",
@@ -93,9 +102,12 @@ function sanitizeValue(value: unknown, rules: SanitizerRule[], path: string, key
   if (typeof value === "string") {
     const redactions: SanitizerRedaction[] = [];
     let current = value;
-    for (const [index, rule] of rules.entries()) {
+    for (const [index, rule] of context.rules.entries()) {
       rule.pattern.lastIndex = 0;
-      const next = current.replace(rule.pattern, rule.replacement);
+      const next =
+        rule.name === "url"
+          ? sanitizeUrls(current, rule, context.allowedUrlHosts)
+          : current.replace(rule.pattern, rule.replacement);
       if (next !== current) {
         redactions.push({
           path,
@@ -111,7 +123,7 @@ function sanitizeValue(value: unknown, rules: SanitizerRule[], path: string, key
   if (Array.isArray(value)) {
     const redactions: SanitizerRedaction[] = [];
     const sanitizedArray = value.map((item, index) => {
-      const sanitized = sanitizeValue(item, rules, `${path}[${index}]`);
+      const sanitized = sanitizeValue(item, context, `${path}[${index}]`);
       redactions.push(...sanitized.redactions);
       return sanitized.value;
     });
@@ -123,7 +135,7 @@ function sanitizeValue(value: unknown, rules: SanitizerRule[], path: string, key
     const redactions: SanitizerRedaction[] = [];
     for (const [childKey, childValue] of Object.entries(value)) {
       const childPath = `${path}.${childKey}`;
-      const child = sanitizeValue(childValue, rules, childPath, childKey);
+      const child = sanitizeValue(childValue, context, childPath, childKey);
       sanitized[childKey] = child.value;
       redactions.push(...child.redactions);
     }
@@ -131,6 +143,29 @@ function sanitizeValue(value: unknown, rules: SanitizerRule[], path: string, key
   }
 
   return { value: toJsonValue(value), redactions: [] };
+}
+
+function sanitizeUrls(value: string, rule: SanitizerRule, allowedUrlHosts: Set<string>): string {
+  return value.replace(rule.pattern, (match) => {
+    if (isAllowedUrl(match, allowedUrlHosts)) {
+      return match;
+    }
+    return rule.replacement;
+  });
+}
+
+function isAllowedUrl(value: string, allowedUrlHosts: Set<string>): boolean {
+  if (allowedUrlHosts.size === 0) {
+    return false;
+  }
+
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase();
+    return allowedUrlHosts.has(host);
+  } catch {
+    return false;
+  }
 }
 
 function validateSanitizedEvents(events: TraceEvent[]): TraceDiagnostic[] {

@@ -47,4 +47,28 @@ describe("trace sanitizer", () => {
       expect.arrayContaining(["$[1].args.token", "$[2].result"])
     );
   });
+
+  it("preserves explicitly allowed URL hosts", () => {
+    const events: TraceEvent[] = [
+      { type: "session_start", schemaVersion: "1.0", sessionId: "s1", seq: 1 },
+      {
+        type: "tool_call",
+        sessionId: "s1",
+        callId: "c1",
+        tool: "http",
+        args: {
+          publicUrl: "https://github.com/drafter0364/agent-replay-kit",
+          privateUrl: "https://private.example.com/token"
+        },
+        seq: 2
+      },
+      { type: "tool_result", sessionId: "s1", callId: "c1", tool: "http", ok: true, result: "ok", seq: 3 },
+      { type: "session_end", sessionId: "s1", ok: true, seq: 4 }
+    ];
+
+    const raw = JSON.stringify(sanitizeTraceEvents(events, { allowedUrlHosts: ["github.com"] }));
+
+    expect(raw).toContain("https://github.com/drafter0364/agent-replay-kit");
+    expect(raw).not.toContain("private.example.com");
+  });
 });

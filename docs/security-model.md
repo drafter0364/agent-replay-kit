@@ -29,6 +29,12 @@ The sanitize command reports how many redactions were applied. Use JSON output w
 agent-replay sanitize private.jsonl --out public.jsonl --format json
 ```
 
+By default, URLs are redacted. Public documentation hosts can be explicitly preserved:
+
+```bash
+agent-replay sanitize private.jsonl --out public.jsonl --allow-url-host github.com
+```
+
 ## Dangerous command assertions
 
 CI assertions can flag command patterns:

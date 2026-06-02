@@ -163,7 +163,7 @@ async function runSanitize(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const trace = requiredPositional(parsed, 0, "trace file");
   const out = requiredOption(parsed, "out");
   const format = optionalOption(parsed, "format") ?? "text";
-  const report = await sanitizeTraceFile(trace, out);
+  const report = await sanitizeTraceFile(trace, out, { allowedUrlHosts: optionList(parsed, "allow-url-host") });
   if (format === "json") {
     io.stdout(JSON.stringify({ output: out, ...report }, null, 2) + "\n");
   } else {
