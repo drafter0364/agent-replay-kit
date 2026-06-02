@@ -90,6 +90,18 @@ agent-replay validate trace.jsonl [--format markdown|json]
 agent-replay inspect trace.jsonl [--format markdown|json]
 ```
 
+## GitHub Action
+
+```yaml
+- uses: drafter0364/agent-replay-kit@main
+  with:
+    mode: validate-and-assert
+    trace: traces/latest.jsonl
+    policy: agent-replay.policy.json
+```
+
+Supported modes are `validate`, `assert`, `validate-and-assert`, and `test`.
+
 ## Trace format
 
 Traces are newline-delimited JSON. Each line is one event:

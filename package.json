@@ -18,6 +18,7 @@
     "dist",
     "docs",
     "examples",
+    "action.yml",
     "README.md",
     "README.zh-CN.md",
     "CHANGELOG.md",

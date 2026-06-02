@@ -86,6 +86,18 @@ agent-replay validate trace.jsonl [--format markdown|json]
 agent-replay inspect trace.jsonl [--format markdown|json]
 ```
 
+## GitHub Action
+
+```yaml
+- uses: drafter0364/agent-replay-kit@main
+  with:
+    mode: validate-and-assert
+    trace: traces/latest.jsonl
+    policy: agent-replay.policy.json
+```
+
+支持的模式包括 `validate`、`assert`、`validate-and-assert` 和 `test`。
+
 ## 当前边界
 
 第一版不绑定特定 Agent 框架，也不提供 Web UI 或数据库存储。项目优先保证 trace schema、SDK、CLI、脱敏和断言能力稳定可测。

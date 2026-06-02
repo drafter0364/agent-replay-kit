@@ -1,0 +1,20 @@
+name: Agent Trace Policy
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  trace-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: drafter0364/agent-replay-kit@main
+        with:
+          mode: validate-and-assert
+          trace: examples/traces/sample.jsonl
+          policy: examples/agent-replay.policy.json

@@ -1,0 +1,81 @@
+name: Agent Replay Kit
+description: Validate and assert Agent Replay Kit traces in GitHub Actions.
+
+inputs:
+  mode:
+    description: validate, assert, test, or validate-and-assert.
+    required: false
+    default: validate-and-assert
+  trace:
+    description: Trace file for validate/assert modes.
+    required: false
+  policy:
+    description: Optional assertion policy JSON file.
+    required: false
+  baseline:
+    description: Baseline trace for test mode.
+    required: false
+  actual:
+    description: Actual trace for test mode.
+    required: false
+  format:
+    description: Output format, markdown or json.
+    required: false
+    default: markdown
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v5
+      with:
+        node-version: 20
+        cache: npm
+        cache-dependency-path: ${{ github.action_path }}/package-lock.json
+
+    - name: Install Agent Replay Kit
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: npm ci
+
+    - name: Build Agent Replay Kit
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: npm run build
+
+    - name: Run Agent Replay Kit
+      shell: bash
+      env:
+        AGENT_REPLAY_MODE: ${{ inputs.mode }}
+        AGENT_REPLAY_TRACE: ${{ inputs.trace }}
+        AGENT_REPLAY_POLICY: ${{ inputs.policy }}
+        AGENT_REPLAY_BASELINE: ${{ inputs.baseline }}
+        AGENT_REPLAY_ACTUAL: ${{ inputs.actual }}
+        AGENT_REPLAY_FORMAT: ${{ inputs.format }}
+        AGENT_REPLAY_CLI: ${{ github.action_path }}/dist/cli.js
+      run: |
+        set -euo pipefail
+
+        policy_args=()
+        if [[ -n "${AGENT_REPLAY_POLICY}" ]]; then
+          policy_args=(--policy "${AGENT_REPLAY_POLICY}")
+        fi
+
+        case "${AGENT_REPLAY_MODE}" in
+          validate)
+            node "${AGENT_REPLAY_CLI}" validate "${AGENT_REPLAY_TRACE}" --format "${AGENT_REPLAY_FORMAT}"
+            ;;
+          assert)
+            node "${AGENT_REPLAY_CLI}" assert "${AGENT_REPLAY_TRACE}" "${policy_args[@]}" --format "${AGENT_REPLAY_FORMAT}"
+            ;;
+          validate-and-assert)
+            node "${AGENT_REPLAY_CLI}" validate "${AGENT_REPLAY_TRACE}" --format "${AGENT_REPLAY_FORMAT}"
+            node "${AGENT_REPLAY_CLI}" assert "${AGENT_REPLAY_TRACE}" "${policy_args[@]}" --format "${AGENT_REPLAY_FORMAT}"
+            ;;
+          test)
+            node "${AGENT_REPLAY_CLI}" test --baseline "${AGENT_REPLAY_BASELINE}" --actual "${AGENT_REPLAY_ACTUAL}" "${policy_args[@]}" --format "${AGENT_REPLAY_FORMAT}"
+            ;;
+          *)
+            echo "Unsupported mode: ${AGENT_REPLAY_MODE}" >&2
+            exit 2
+            ;;
+        esac

@@ -13,3 +13,4 @@
 - Improved trace file I/O diagnostics and CLI JSON parse errors.
 - Added sanitizer URL host allowlisting.
 - Added contract assertions for required args, tool duration, failed tools, and successful session end.
+- Added a composite GitHub Action wrapper.
