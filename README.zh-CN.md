@@ -2,7 +2,7 @@
 
 Agent Replay Kit 是面向工具调用型 AI Agent 的开源工程基础设施。它可以把 Agent 的工具调用记录成 JSONL trace，之后进行回放、对比、脱敏和 CI 回归断言。
 
-[English README](README.md) | [Trace schema](docs/trace-schema.md) | [Roadmap](ROADMAP.md)
+[English README](README.md) | [Trace schema](docs/trace-schema.md) | [Adapter contract](docs/adapter-contract.md) | [Roadmap](ROADMAP.md)
 
 ## 为什么需要它
 

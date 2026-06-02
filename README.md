@@ -4,7 +4,7 @@
 
 Agent Replay Kit is open-source infrastructure for debugging and regression-testing tool-using AI agents. It records agent tool calls as JSONL traces, replays recorded tool results, compares trace changes, sanitizes sensitive data, and turns agent behavior into CI assertions.
 
-[Chinese README](README.zh-CN.md) | [Trace schema](docs/trace-schema.md) | [Roadmap](ROADMAP.md)
+[Chinese README](README.zh-CN.md) | [Trace schema](docs/trace-schema.md) | [Adapter contract](docs/adapter-contract.md) | [Roadmap](ROADMAP.md)
 
 ## Why this exists
 

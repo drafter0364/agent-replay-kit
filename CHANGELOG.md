@@ -14,3 +14,4 @@
 - Added sanitizer URL host allowlisting.
 - Added contract assertions for required args, tool duration, failed tools, and successful session end.
 - Added a composite GitHub Action wrapper.
+- Added a framework-neutral adapter contract.
