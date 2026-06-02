@@ -85,6 +85,8 @@ agent-replay test --baseline golden.jsonl --actual current.jsonl [--policy polic
 agent-replay validate trace.jsonl [--format markdown|json]
 agent-replay inspect trace.jsonl [--format markdown|json|timeline-json]
 agent-replay export-otel trace.jsonl
+agent-replay seal trace.jsonl --out sealed.jsonl
+agent-replay verify-integrity sealed.jsonl [--format markdown|json]
 ```
 
 ## GitHub Action

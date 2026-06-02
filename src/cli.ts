@@ -12,6 +12,7 @@ import { renderTraceValidationMarkdown, validateTraceFile } from "./validation.j
 import { mergeAssertionConfigs, readAssertionPolicyFile } from "./policy.js";
 import { renderGoldenTraceRegressionMarkdown, testGoldenTraceRegressionFiles } from "./regression.js";
 import { exportTraceFileToOtel } from "./otel.js";
+import { renderTraceIntegrityMarkdown, sealTraceFile, verifyTraceFileIntegrity } from "./integrity.js";
 
 interface CliIo {
   stdout: (text: string) => void;
@@ -36,6 +37,8 @@ Commands:
   validate trace.jsonl [--format markdown|json]
   inspect trace.jsonl [--format markdown|json]
   export-otel trace.jsonl
+  seal trace.jsonl --out sealed.jsonl
+  verify-integrity trace.jsonl [--format markdown|json]
 `;
 
 export async function runCli(argv: string[], io: CliIo = defaultIo): Promise<number> {
@@ -67,6 +70,10 @@ export async function runCli(argv: string[], io: CliIo = defaultIo): Promise<num
         return await runInspect(parsed, io);
       case "export-otel":
         return await runExportOtel(parsed, io);
+      case "seal":
+        return await runSeal(parsed, io);
+      case "verify-integrity":
+        return await runVerifyIntegrity(parsed, io);
       default:
         io.stderr(`Unknown command: ${parsed.command}\n`);
         io.stderr(helpText);
@@ -230,6 +237,22 @@ async function runExportOtel(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const trace = requiredPositional(parsed, 0, "trace file");
   io.stdout(JSON.stringify(await exportTraceFileToOtel(trace), null, 2) + "\n");
   return 0;
+}
+
+async function runSeal(parsed: ParsedArgs, io: CliIo): Promise<number> {
+  const trace = requiredPositional(parsed, 0, "trace file");
+  const out = requiredOption(parsed, "out");
+  await sealTraceFile(trace, out);
+  io.stdout(`Wrote sealed trace to ${out}\n`);
+  return 0;
+}
+
+async function runVerifyIntegrity(parsed: ParsedArgs, io: CliIo): Promise<number> {
+  const trace = requiredPositional(parsed, 0, "trace file");
+  const format = optionalOption(parsed, "format") ?? "markdown";
+  const report = await verifyTraceFileIntegrity(trace);
+  io.stdout(format === "json" ? JSON.stringify(report, null, 2) + "\n" : renderTraceIntegrityMarkdown(report));
+  return report.ok ? 0 : 1;
 }
 
 function requiredPositional(parsed: ParsedArgs, index: number, label: string): string {

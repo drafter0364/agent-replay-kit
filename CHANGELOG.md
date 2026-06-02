@@ -20,3 +20,4 @@
 - Added a runnable MCP-style trace adapter example.
 - Added call-id replay mode for out-of-order tool replay.
 - Added OpenTelemetry-style span export.
+- Added optional trace integrity sealing and verification.

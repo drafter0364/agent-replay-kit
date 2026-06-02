@@ -63,6 +63,13 @@ export {
 } from "./regression.js";
 export { exportTraceFileToOtel, exportTraceToOtel, type OtelSpanLike, type OtelSpanStatus, type OtelTraceExport } from "./otel.js";
 export {
+  renderTraceIntegrityMarkdown,
+  sealTraceEvents,
+  sealTraceFile,
+  verifyTraceFileIntegrity,
+  verifyTraceIntegrity
+} from "./integrity.js";
+export {
   sanitizeTraceEvents,
   sanitizeTraceEventsWithReport,
   sanitizeTraceFile,

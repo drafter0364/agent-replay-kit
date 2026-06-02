@@ -51,6 +51,12 @@ export function validateTraceEvent(value: unknown): TraceValidationResult {
   if ("metadata" in value && !isRecord(value.metadata)) {
     errors.push("event.metadata must be an object");
   }
+  if ("hash" in value && typeof value.hash !== "string") {
+    errors.push("event.hash must be a string");
+  }
+  if ("prevHash" in value && typeof value.prevHash !== "string") {
+    errors.push("event.prevHash must be a string");
+  }
 
   switch (value.type) {
     case "session_start":

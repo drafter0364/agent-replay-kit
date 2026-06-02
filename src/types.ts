@@ -18,6 +18,8 @@ export interface TraceBaseEvent {
   timestamp?: string;
   sessionId?: string;
   metadata?: JsonObject;
+  hash?: string;
+  prevHash?: string;
 }
 
 export interface SessionStartEvent extends TraceBaseEvent {

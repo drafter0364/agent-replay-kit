@@ -44,6 +44,20 @@ describe("CLI", () => {
     });
   });
 
+  it("seals and verifies trace integrity from the CLI", async () => {
+    await withTempDir(async (dir) => {
+      const tracePath = join(dir, "trace.jsonl");
+      const sealedPath = join(dir, "sealed.jsonl");
+      const io = { stdout: (_text: string) => undefined, stderr: (_text: string) => undefined };
+
+      await runCli(["record", "--out", tracePath, "--tool", "shell", "--args-json", "{\"command\":\"npm test\"}"], io);
+
+      await expect(runCli(["seal", tracePath, "--out", sealedPath], io)).resolves.toBe(0);
+      await expect(runCli(["verify-integrity", sealedPath], io)).resolves.toBe(0);
+      await expect(runCli(["verify-integrity", tracePath], io)).resolves.toBe(1);
+    });
+  });
+
   it("passes sanitizer URL allowlist hosts through the CLI", async () => {
     await withTempDir(async (dir) => {
       const tracePath = join(dir, "trace.jsonl");
