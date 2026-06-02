@@ -70,6 +70,16 @@ export {
   verifyTraceIntegrity
 } from "./integrity.js";
 export {
+  analyzeTrace,
+  analyzeTraceFile,
+  renderTraceAnalysisMarkdown,
+  type AnalyzeTraceOptions,
+  type TraceAnalysisFinding,
+  type TraceAnalysisReport,
+  type TraceAnalysisSeverity,
+  type TraceAnalysisSummary
+} from "./analyze.js";
+export {
   sanitizeTraceEvents,
   sanitizeTraceEventsWithReport,
   sanitizeTraceFile,

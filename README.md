@@ -88,6 +88,7 @@ agent-replay assert trace.jsonl [--policy policy.json] [--must-call tool] [--mus
 agent-replay test --baseline golden.jsonl --actual current.jsonl [--policy policy.json]
 agent-replay validate trace.jsonl [--format markdown|json]
 agent-replay inspect trace.jsonl [--format markdown|json|timeline-json]
+agent-replay analyze trace.jsonl [--format markdown|json] [--max-shell-calls n]
 agent-replay export-otel trace.jsonl
 agent-replay seal trace.jsonl --out sealed.jsonl
 agent-replay verify-integrity sealed.jsonl [--format markdown|json]

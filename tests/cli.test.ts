@@ -28,6 +28,7 @@ describe("CLI", () => {
       expect((await readTraceFile(tracePath)).length).toBe(4);
       await expect(runCli(["inspect", tracePath, "--format", "json"], io)).resolves.toBe(0);
       await expect(runCli(["inspect", tracePath, "--format", "timeline-json"], io)).resolves.toBe(0);
+      await expect(runCli(["analyze", tracePath, "--format", "json"], io)).resolves.toBe(0);
       await expect(runCli(["export-otel", tracePath], io)).resolves.toBe(0);
       await expect(runCli(["validate", tracePath, "--format", "json"], io)).resolves.toBe(0);
       await expect(runCli(["replay", tracePath, "--tool", "shell", "--args-json", "{\"command\":\"npm test\"}"], io)).resolves.toBe(0);
@@ -39,6 +40,7 @@ describe("CLI", () => {
       expect(output.join("")).toContain("\"exitCode\": 0");
       expect(output.join("")).toContain("\"eventCount\": 4");
       expect(output.join("")).toContain("\"slowestTools\"");
+      expect(output.join("")).toContain("\"findings\": 0");
       expect(output.join("")).toContain("\"serviceName\": \"agent-replay-kit\"");
       expect(output.join("")).toContain("\"redactionCount\"");
     });
@@ -133,6 +135,20 @@ describe("CLI", () => {
 
       await expect(runCli(["diff", one, two], io)).resolves.toBe(1);
       await expect(runCli(["assert", one, "--must-not-call", "shell"], io)).resolves.toBe(1);
+
+      await import("node:fs/promises").then(({ writeFile }) =>
+        writeFile(
+          two,
+          [
+            "{\"type\":\"session_start\",\"schemaVersion\":\"1.0\",\"sessionId\":\"s1\"}",
+            "{\"type\":\"tool_call\",\"callId\":\"c1\",\"tool\":\"shell\",\"args\":{\"command\":\"npm test\"}}",
+            "{\"type\":\"tool_result\",\"callId\":\"c1\",\"tool\":\"shell\",\"ok\":false,\"error\":{\"message\":\"failed\"}}",
+            "{\"type\":\"session_end\",\"ok\":true}"
+          ].join("\n") + "\n",
+          "utf8"
+        )
+      );
+      await expect(runCli(["analyze", two], io)).resolves.toBe(1);
     });
   });
 

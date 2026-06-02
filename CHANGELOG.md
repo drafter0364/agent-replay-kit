@@ -22,3 +22,4 @@
 - Added OpenTelemetry-style span export.
 - Added optional trace integrity sealing and verification.
 - Added streaming trace reads and `.jsonl.gz` trace file support.
+- Added an agent behavior anti-pattern analysis command.

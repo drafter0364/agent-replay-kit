@@ -13,6 +13,7 @@ import { mergeAssertionConfigs, readAssertionPolicyFile } from "./policy.js";
 import { renderGoldenTraceRegressionMarkdown, testGoldenTraceRegressionFiles } from "./regression.js";
 import { exportTraceFileToOtel } from "./otel.js";
 import { renderTraceIntegrityMarkdown, sealTraceFile, verifyTraceFileIntegrity } from "./integrity.js";
+import { analyzeTraceFile, renderTraceAnalysisMarkdown } from "./analyze.js";
 
 interface CliIo {
   stdout: (text: string) => void;
@@ -36,6 +37,7 @@ Commands:
   test --baseline golden.jsonl --actual current.jsonl [--policy policy.json]
   validate trace.jsonl [--format markdown|json]
   inspect trace.jsonl [--format markdown|json]
+  analyze trace.jsonl [--format markdown|json] [--max-shell-calls n]
   export-otel trace.jsonl
   seal trace.jsonl --out sealed.jsonl
   verify-integrity trace.jsonl [--format markdown|json]
@@ -68,6 +70,8 @@ export async function runCli(argv: string[], io: CliIo = defaultIo): Promise<num
         return await runValidate(parsed, io);
       case "inspect":
         return await runInspect(parsed, io);
+      case "analyze":
+        return await runAnalyze(parsed, io);
       case "export-otel":
         return await runExportOtel(parsed, io);
       case "seal":
@@ -231,6 +235,14 @@ async function runInspect(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const summary = await summarizeTraceFile(trace);
   io.stdout(format === "json" ? JSON.stringify(summary, null, 2) + "\n" : renderTraceSummaryMarkdown(summary));
   return 0;
+}
+
+async function runAnalyze(parsed: ParsedArgs, io: CliIo): Promise<number> {
+  const trace = requiredPositional(parsed, 0, "trace file");
+  const format = optionalOption(parsed, "format") ?? "markdown";
+  const report = await analyzeTraceFile(trace, { maxShellCalls: optionalNumberOption(parsed, "max-shell-calls") });
+  io.stdout(format === "json" ? JSON.stringify(report, null, 2) + "\n" : renderTraceAnalysisMarkdown(report));
+  return report.ok ? 0 : 1;
 }
 
 async function runExportOtel(parsed: ParsedArgs, io: CliIo): Promise<number> {
