@@ -19,6 +19,41 @@ describe("trace diff", () => {
     expect(renderTraceDiffMarkdown(diff)).toContain("Changed tool_call -> tool_call");
   });
 
+  it("handles empty trace arrays", () => {
+    expect(diffTraces([], []).changed).toBe(false);
+    expect(diffTraces([], []).summary).toEqual({ added: 0, removed: 0, modified: 0, unchanged: 0 });
+
+    const single: TraceEvent[] = [{ type: "tool_call", callId: "c1", tool: "shell", args: {} }];
+    expect(diffTraces([], single).summary.added).toBe(1);
+    expect(diffTraces(single, []).summary.removed).toBe(1);
+  });
+
+  it("reports removed events when before has more entries", () => {
+    const before: TraceEvent[] = [
+      { type: "tool_call", callId: "c1", tool: "shell", args: {} },
+      { type: "tool_call", callId: "c2", tool: "read_file", args: {} }
+    ];
+    const after: TraceEvent[] = [{ type: "tool_call", callId: "c1", tool: "shell", args: {} }];
+    const diff = diffTraces(before, after);
+
+    expect(diff.changed).toBe(true);
+    expect(diff.summary.removed).toBe(1);
+    expect(diff.changes[0].kind).toBe("removed");
+  });
+
+  it("reports added events when after has more entries", () => {
+    const before: TraceEvent[] = [{ type: "tool_call", callId: "c1", tool: "shell", args: {} }];
+    const after: TraceEvent[] = [
+      { type: "tool_call", callId: "c1", tool: "shell", args: {} },
+      { type: "tool_call", callId: "c2", tool: "read_file", args: {} }
+    ];
+    const diff = diffTraces(before, after);
+
+    expect(diff.changed).toBe(true);
+    expect(diff.summary.added).toBe(1);
+    expect(diff.changes[0].kind).toBe("added");
+  });
+
   it("semantically matches tool calls by callId when model messages are inserted", () => {
     const before: TraceEvent[] = [
       { type: "session_start", schemaVersion: "1.0", sessionId: "s1" },

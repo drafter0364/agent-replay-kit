@@ -72,6 +72,23 @@ describe("trace sanitizer", () => {
     expect(raw).not.toContain("private.example.com");
   });
 
+  it("applies custom sanitizer rules", () => {
+    const events: TraceEvent[] = [
+      { type: "session_start", schemaVersion: "1.0", sessionId: "s1", seq: 1 },
+      { type: "tool_call", sessionId: "s1", callId: "c1", tool: "http", args: { data: "SECRET_WIDGET_123" }, seq: 2 },
+      { type: "tool_result", sessionId: "s1", callId: "c1", tool: "http", ok: true, result: "ok", seq: 3 },
+      { type: "session_end", sessionId: "s1", ok: true, seq: 4 }
+    ];
+
+    const sanitized = sanitizeTraceEvents(events, {
+      rules: [{ pattern: /SECRET_WIDGET_\d+/g, replacement: "[WIDGET]" }]
+    });
+    const raw = JSON.stringify(sanitized);
+
+    expect(raw).not.toContain("SECRET_WIDGET_123");
+    expect(raw).toContain("[WIDGET]");
+  });
+
   it("redacts common high-confidence service tokens", () => {
     const events: TraceEvent[] = [
       { type: "session_start", schemaVersion: "1.0", sessionId: "s1", seq: 1 },

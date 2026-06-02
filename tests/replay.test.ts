@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ReplayMismatchError, TraceReplayer } from "../src/index.js";
+import { RecordedToolError, ReplayMismatchError, TraceReplayer } from "../src/index.js";
 import type { TraceEvent } from "../src/types.js";
 
 const events: TraceEvent[] = [
@@ -42,6 +42,28 @@ describe("TraceReplayer", () => {
     expect(replayer.remaining().map((interaction) => interaction.call.callId)).toEqual(["c1"]);
     expect(replayer.consumedCount()).toBe(1);
     expect(() => replayer.replayToolByCallId("c2")).toThrow(ReplayMismatchError);
+  });
+
+  it("throws RecordedToolError when recorded tool failed", () => {
+    const failEvents: TraceEvent[] = [
+      { type: "session_start", schemaVersion: "1.0", sessionId: "s1" },
+      { type: "tool_call", callId: "c1", tool: "http", args: { url: "https://example.test" } },
+      { type: "tool_result", callId: "c1", tool: "http", ok: false, error: { name: "NetworkError", message: "timeout" } }
+    ];
+
+    let caught: unknown;
+    const replayer = new TraceReplayer(failEvents);
+    try {
+      replayer.replayTool("http", { url: "https://example.test" });
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toBeInstanceOf(RecordedToolError);
+    expect((caught as RecordedToolError).recorded.error?.name).toBe("NetworkError");
+    expect((caught as RecordedToolError).name).toBe("NetworkError");
+    expect((caught as RecordedToolError).message).toBe("timeout");
+    expect(replayer.consumedCount()).toBe(1);
   });
 
   it("rejects positional replay in call-id mode", () => {

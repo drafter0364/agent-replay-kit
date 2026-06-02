@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseTraceLine, validateTraceEvent } from "../src/schema.js";
+import { assertTraceEvent, isTraceEvent, parseTraceLine, validateTraceEvent } from "../src/schema.js";
 
 describe("trace schema", () => {
   it("accepts a valid tool call event", () => {
@@ -73,6 +73,35 @@ describe("trace schema", () => {
 
     expect(result.ok).toBe(false);
     expect(result.errors).toContain("tool_result.result is required when ok is true");
+  });
+
+  it("accepts a valid assertion event", () => {
+    expect(
+      validateTraceEvent({
+        type: "assertion",
+        name: "must-call:shell",
+        ok: true,
+        message: "Tool shell was called"
+      }).ok
+    ).toBe(true);
+
+    const result = validateTraceEvent({ type: "assertion", ok: true });
+    expect(result.ok).toBe(false);
+    expect(result.errors).toContain("assertion.name must be a non-empty string");
+  });
+
+  it("identifies trace events via isTraceEvent type guard", () => {
+    expect(isTraceEvent({ type: "session_start", schemaVersion: "1.0", sessionId: "s1" })).toBe(true);
+    expect(isTraceEvent({ type: "tool_call", callId: "c1", tool: "shell", args: {} })).toBe(true);
+    expect(isTraceEvent({ type: "unknown_type" })).toBe(false);
+    expect(isTraceEvent(null)).toBe(false);
+    expect(isTraceEvent("string")).toBe(false);
+  });
+
+  it("asserts trace events and throws on invalid input", () => {
+    expect(() => assertTraceEvent({ type: "session_start", schemaVersion: "1.0", sessionId: "s1" })).not.toThrow();
+    expect(() => assertTraceEvent({ type: "not_a_type" })).toThrow(/Invalid trace event/);
+    expect(() => assertTraceEvent(null)).toThrow(/event must be an object/);
   });
 
   it("rejects negative durations and oversized lines", () => {

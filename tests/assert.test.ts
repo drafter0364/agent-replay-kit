@@ -47,6 +47,20 @@ describe("trace assertions", () => {
     expect(assertTrace(events, { requiredOrder: ["shell", "read_file"] }).ok).toBe(false);
   });
 
+  it("enforces per-tool call count limits", () => {
+    const report = assertTrace(events, { maxToolCalls: { shell: 1 } });
+
+    expect(report.ok).toBe(false);
+    expect(report.findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "max-tool-calls:shell", ok: false, message: expect.stringContaining("max is 1") })
+      ])
+    );
+
+    const passingReport = assertTrace(events, { maxToolCalls: { shell: 5, read_file: 1 } });
+    expect(passingReport.ok).toBe(true);
+  });
+
   it("checks required args and tool duration contracts", () => {
     expect(assertTrace(events, { mustUseArgs: [{ tool: "shell", args: { command: "npm test" } }], maxDurationMs: 300 }).ok).toBe(
       true

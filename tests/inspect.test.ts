@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildTraceTimeline, summarizeTrace } from "../src/index.js";
+import { buildTraceTimeline, renderTraceSummaryMarkdown, summarizeTrace } from "../src/index.js";
 import type { TraceEvent } from "../src/types.js";
 
 describe("trace inspect", () => {
@@ -19,6 +19,36 @@ describe("trace inspect", () => {
       failedTools: 1,
       assertions: { passed: 1, failed: 0 }
     });
+  });
+
+  it("handles empty event arrays", () => {
+    const summary = summarizeTrace([]);
+
+    expect(summary).toEqual({
+      eventCount: 0,
+      sessionId: undefined,
+      agent: undefined,
+      toolCalls: {},
+      failedTools: 0,
+      assertions: { passed: 0, failed: 0 }
+    });
+  });
+
+  it("renders summary as markdown", () => {
+    const events: TraceEvent[] = [
+      { type: "session_start", schemaVersion: "1.0", sessionId: "s1", agent: "demo" },
+      { type: "tool_call", callId: "c1", tool: "shell", args: {} },
+      { type: "tool_result", callId: "c1", tool: "shell", ok: true, result: {} },
+      { type: "assertion", name: "must-call:shell", ok: true }
+    ];
+    const markdown = renderTraceSummaryMarkdown(summarizeTrace(events));
+
+    expect(markdown).toContain("# Agent Trace Summary");
+    expect(markdown).toContain("Events: 4");
+    expect(markdown).toContain("Session: s1");
+    expect(markdown).toContain("Agent: demo");
+    expect(markdown).toContain("- shell: 1");
+    expect(markdown).toContain("1 passed, 0 failed");
   });
 
   it("builds timeline-json data for viewer and telemetry use", () => {
