@@ -27,6 +27,7 @@ export interface SessionEndOptions {
 export class TraceRecorder {
   private seq = 0;
   private startedAt = Date.now();
+  private state: "idle" | "started" | "ended" = "idle";
   readonly sessionId: string;
 
   constructor(
@@ -37,8 +38,11 @@ export class TraceRecorder {
   }
 
   async start(input?: JsonValue): Promise<SessionStartEvent> {
+    if (this.state !== "idle") {
+      throw new Error("TraceRecorder.start() can only be called once");
+    }
     this.startedAt = Date.now();
-    return this.write({
+    const event = await this.write<SessionStartEvent>({
       type: "session_start",
       schemaVersion: "1.0",
       sessionId: this.sessionId,
@@ -47,10 +51,13 @@ export class TraceRecorder {
       input,
       metadata: this.options.metadata
     });
+    this.state = "started";
+    return event;
   }
 
   async modelMessage(event: Omit<ModelMessageEvent, "type" | "seq" | "timestamp" | "sessionId">): Promise<ModelMessageEvent> {
-    return this.write({
+    this.assertRecording("modelMessage");
+    return this.write<ModelMessageEvent>({
       type: "model_message",
       sessionId: this.sessionId,
       ...event
@@ -63,6 +70,7 @@ export class TraceRecorder {
     run: () => Promise<T> | T,
     metadata?: JsonObject
   ): Promise<T> {
+    this.assertRecording("tool");
     const callId = createId("call");
     await this.toolCall(tool, args, callId, metadata);
 
@@ -92,7 +100,8 @@ export class TraceRecorder {
   }
 
   async toolCall(tool: string, args: JsonValue, callId = createId("call"), metadata?: JsonObject): Promise<ToolCallEvent> {
-    return this.write({
+    this.assertRecording("toolCall");
+    return this.write<ToolCallEvent>({
       type: "tool_call",
       sessionId: this.sessionId,
       callId,
@@ -103,7 +112,8 @@ export class TraceRecorder {
   }
 
   async toolResult(event: Omit<ToolResultEvent, "type" | "seq" | "timestamp" | "sessionId">): Promise<ToolResultEvent> {
-    return this.write({
+    this.assertRecording("toolResult");
+    return this.write<ToolResultEvent>({
       type: "tool_result",
       sessionId: this.sessionId,
       ...event
@@ -111,7 +121,8 @@ export class TraceRecorder {
   }
 
   async end(options: SessionEndOptions = {}): Promise<SessionEndEvent> {
-    return this.write({
+    this.assertRecording("end");
+    const event = await this.write<SessionEndEvent>({
       type: "session_end",
       sessionId: this.sessionId,
       ok: options.ok,
@@ -119,16 +130,29 @@ export class TraceRecorder {
       durationMs: Date.now() - this.startedAt,
       metadata: options.metadata
     });
+    this.state = "ended";
+    return event;
   }
 
   private async write<T extends TraceEvent>(event: Omit<T, "seq" | "timestamp"> & Partial<Pick<T, "seq" | "timestamp">>): Promise<T> {
+    const nextSeq = this.seq + 1;
     const fullEvent = {
       ...event,
-      seq: ++this.seq,
+      seq: nextSeq,
       timestamp: nowIso()
     } as T;
     await appendTraceEvent(this.filePath, fullEvent);
+    this.seq = nextSeq;
     return fullEvent;
+  }
+
+  private assertRecording(method: string): void {
+    if (this.state === "idle") {
+      throw new Error(`TraceRecorder.${method}() requires start() to be called first`);
+    }
+    if (this.state === "ended") {
+      throw new Error(`TraceRecorder.${method}() cannot be called after end()`);
+    }
   }
 }
 

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { JsonObject, JsonValue } from "./types.js";
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
@@ -40,6 +41,5 @@ export function nowIso(): string {
 }
 
 export function createId(prefix: string): string {
-  const random = Math.random().toString(36).slice(2, 10);
-  return `${prefix}_${Date.now().toString(36)}_${random}`;
+  return `${prefix}_${randomUUID()}`;
 }

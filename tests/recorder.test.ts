@@ -41,4 +41,36 @@ describe("TraceRecorder", () => {
       });
     });
   });
+
+  it("enforces the recorder lifecycle", async () => {
+    await withTempDir(async (dir) => {
+      const tracePath = join(dir, "trace.jsonl");
+      const recorder = createRecorder(tracePath);
+
+      await expect(recorder.tool("shell", { command: "npm test" }, () => ({ exitCode: 0 }))).rejects.toThrow(
+        "requires start()"
+      );
+
+      await recorder.start();
+      await expect(recorder.start()).rejects.toThrow("can only be called once");
+      await recorder.end({ ok: true });
+
+      await expect(recorder.modelMessage({ role: "assistant", content: "done" })).rejects.toThrow("after end()");
+      await expect(recorder.end({ ok: true })).rejects.toThrow("after end()");
+    });
+  });
+
+  it("uses monotonic sequence numbers", async () => {
+    await withTempDir(async (dir) => {
+      const tracePath = join(dir, "trace.jsonl");
+      const recorder = createRecorder(tracePath, { sessionId: "session_seq" });
+
+      await recorder.start();
+      await recorder.tool("read_file", { path: "README.md" }, () => "ok");
+      await recorder.end({ ok: true });
+
+      const events = await readTraceFile(tracePath);
+      expect(events.map((event) => event.seq)).toEqual([1, 2, 3, 4]);
+    });
+  });
 });
