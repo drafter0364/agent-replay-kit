@@ -87,7 +87,7 @@ agent-replay sanitize trace.jsonl --out public.jsonl [--allow-url-host github.co
 agent-replay assert trace.jsonl [--policy policy.json] [--must-call tool] [--must-not-call tool] [--max-shell-calls n]
 agent-replay test --baseline golden.jsonl --actual current.jsonl [--policy policy.json]
 agent-replay validate trace.jsonl [--format markdown|json]
-agent-replay inspect trace.jsonl [--format markdown|json]
+agent-replay inspect trace.jsonl [--format markdown|json|timeline-json]
 ```
 
 ## GitHub Action

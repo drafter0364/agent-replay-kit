@@ -6,7 +6,7 @@ import { readTraceFile } from "./io.js";
 import { createRecorder } from "./recorder.js";
 import { collectToolInteractions, createReplayerFromFile } from "./replay.js";
 import { sanitizeTraceFile } from "./sanitize.js";
-import { renderTraceSummaryMarkdown, summarizeTraceFile } from "./inspect.js";
+import { buildTraceTimelineFile, renderTraceSummaryMarkdown, summarizeTraceFile } from "./inspect.js";
 import type { JsonValue } from "./types.js";
 import { renderTraceValidationMarkdown, validateTraceFile } from "./validation.js";
 import { mergeAssertionConfigs, readAssertionPolicyFile } from "./policy.js";
@@ -202,6 +202,10 @@ async function runValidate(parsed: ParsedArgs, io: CliIo): Promise<number> {
 async function runInspect(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const trace = requiredPositional(parsed, 0, "trace file");
   const format = optionalOption(parsed, "format") ?? "markdown";
+  if (format === "timeline-json") {
+    io.stdout(JSON.stringify(await buildTraceTimelineFile(trace), null, 2) + "\n");
+    return 0;
+  }
   const summary = await summarizeTraceFile(trace);
   io.stdout(format === "json" ? JSON.stringify(summary, null, 2) + "\n" : renderTraceSummaryMarkdown(summary));
   return 0;

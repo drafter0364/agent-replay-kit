@@ -27,6 +27,7 @@ describe("CLI", () => {
 
       expect((await readTraceFile(tracePath)).length).toBe(4);
       await expect(runCli(["inspect", tracePath, "--format", "json"], io)).resolves.toBe(0);
+      await expect(runCli(["inspect", tracePath, "--format", "timeline-json"], io)).resolves.toBe(0);
       await expect(runCli(["validate", tracePath, "--format", "json"], io)).resolves.toBe(0);
       await expect(runCli(["replay", tracePath, "--tool", "shell", "--args-json", "{\"command\":\"npm test\"}"], io)).resolves.toBe(0);
       const sanitizedPath = join(dir, "public.jsonl");
@@ -35,6 +36,7 @@ describe("CLI", () => {
       await expect(runCli(["assert", tracePath, "--must-call", "shell"], io)).resolves.toBe(0);
       expect(output.join("")).toContain("\"exitCode\": 0");
       expect(output.join("")).toContain("\"eventCount\": 4");
+      expect(output.join("")).toContain("\"slowestTools\"");
       expect(output.join("")).toContain("\"redactionCount\"");
     });
   });

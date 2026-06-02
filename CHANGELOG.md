@@ -16,3 +16,4 @@
 - Added a composite GitHub Action wrapper.
 - Added a framework-neutral adapter contract.
 - Added side-effect classification assertions for tool metadata.
+- Added timeline JSON export for trace inspection.

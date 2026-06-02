@@ -82,4 +82,13 @@ export {
   type TraceAssertionReport
 } from "./assert.js";
 export { mergeAssertionConfigs, parseAssertionPolicy, readAssertionPolicyFile } from "./policy.js";
-export { renderTraceSummaryMarkdown, summarizeTrace, summarizeTraceFile, type TraceSummary } from "./inspect.js";
+export {
+  buildTraceTimeline,
+  buildTraceTimelineFile,
+  renderTraceSummaryMarkdown,
+  summarizeTrace,
+  summarizeTraceFile,
+  type TraceSummary,
+  type TraceTimeline,
+  type TraceTimelineItem
+} from "./inspect.js";
