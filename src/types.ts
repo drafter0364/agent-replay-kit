@@ -93,7 +93,7 @@ export interface RecordedToolInteraction {
   result?: ToolResultEvent;
 }
 
-export type ReplayMatchMode = "strict" | "tool-only";
+export type ReplayMatchMode = "strict" | "tool-only" | "call-id";
 
 export interface TraceValidationResult {
   ok: boolean;

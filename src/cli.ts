@@ -27,7 +27,7 @@ const helpText = `agent-replay <command>
 
 Commands:
   record --out trace.jsonl --tool name [--args-json '{}'] [--result-json '{}']
-  replay trace.jsonl [--tool name --args-json '{}']
+  replay trace.jsonl [--tool name --args-json '{}'] [--call-id id]
   diff old.jsonl new.jsonl [--format markdown|json]
   sanitize trace.jsonl --out public.jsonl [--format text|json]
   assert trace.jsonl [--policy policy.json] [--must-call tool] [--must-not-call tool] [--max-shell-calls n]
@@ -123,6 +123,17 @@ async function runRecord(parsed: ParsedArgs, io: CliIo): Promise<number> {
 async function runReplay(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const trace = requiredPositional(parsed, 0, "trace file");
   const tool = optionalOption(parsed, "tool");
+  const callId = optionalOption(parsed, "call-id");
+
+  if (callId) {
+    const replayer = await createReplayerFromFile(trace, { matchMode: "call-id" });
+    const result = replayer.replayToolByCallId(callId, {
+      tool,
+      args: optionalOption(parsed, "args-json") ? parseJsonOption(parsed, "args-json", {}) : undefined
+    });
+    io.stdout(JSON.stringify(result, null, 2) + "\n");
+    return 0;
+  }
 
   if (!tool) {
     const events = await readTraceFile(trace);

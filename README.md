@@ -81,7 +81,7 @@ const replayed = replayer.replayTool("shell", { command: "npm test" });
 
 ```text
 agent-replay record --out trace.jsonl --tool name [--args-json '{}'] [--result-json '{}']
-agent-replay replay trace.jsonl [--tool name --args-json '{}']
+agent-replay replay trace.jsonl [--tool name --args-json '{}'] [--call-id id]
 agent-replay diff old.jsonl new.jsonl [--mode positional|semantic] [--format markdown|json]
 agent-replay sanitize trace.jsonl --out public.jsonl [--allow-url-host github.com] [--format text|json]
 agent-replay assert trace.jsonl [--policy policy.json] [--must-call tool] [--must-not-call tool] [--max-shell-calls n]

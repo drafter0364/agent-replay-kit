@@ -22,19 +22,26 @@ export class RecordedToolError extends Error {
 
 export class TraceReplayer {
   private index = 0;
+  private readonly consumedCallIds = new Set<string>();
+  private readonly byCallId: Map<string, RecordedToolInteraction>;
   readonly interactions: RecordedToolInteraction[];
 
   constructor(events: TraceEvent[], private readonly options: ReplayOptions = {}) {
     this.interactions = collectToolInteractions(events);
+    this.byCallId = new Map(this.interactions.map((interaction) => [interaction.call.callId, interaction]));
   }
 
   replayTool<T = JsonValue>(tool: string, args: JsonValue): T {
+    const matchMode = this.options.matchMode ?? "strict";
+    if (matchMode === "call-id") {
+      throw new ReplayMismatchError("replayTool() cannot be used with call-id match mode; use replayToolByCallId()");
+    }
+
     const interaction = this.interactions[this.index];
     if (!interaction) {
       throw new ReplayMismatchError(`No recorded tool call remains for ${tool}`);
     }
 
-    const matchMode = this.options.matchMode ?? "strict";
     if (interaction.call.tool !== tool) {
       throw new ReplayMismatchError(`Expected tool ${interaction.call.tool}, received ${tool}`);
     }
@@ -55,11 +62,47 @@ export class TraceReplayer {
     return interaction.result.result as T;
   }
 
+  replayToolByCallId<T = JsonValue>(callId: string, expected?: { tool?: string; args?: JsonValue }): T {
+    const interaction = this.byCallId.get(callId);
+    if (!interaction) {
+      throw new ReplayMismatchError(`No recorded tool call found for callId ${callId}`);
+    }
+
+    if (this.consumedCallIds.has(callId)) {
+      throw new ReplayMismatchError(`Recorded tool call ${callId} has already been replayed`);
+    }
+
+    if (expected?.tool && interaction.call.tool !== expected.tool) {
+      throw new ReplayMismatchError(`Expected tool ${interaction.call.tool}, received ${expected.tool}`);
+    }
+
+    if (expected?.args !== undefined && stableStringify(interaction.call.args) !== stableStringify(expected.args)) {
+      throw new ReplayMismatchError(`Tool args mismatch for callId ${callId}`);
+    }
+
+    this.consumedCallIds.add(callId);
+    if (!interaction.result) {
+      throw new ReplayMismatchError(`Recorded tool call ${interaction.call.callId} has no result`);
+    }
+
+    if (!interaction.result.ok) {
+      throw new RecordedToolError(interaction.result);
+    }
+
+    return interaction.result.result as T;
+  }
+
   remaining(): RecordedToolInteraction[] {
+    if ((this.options.matchMode ?? "strict") === "call-id") {
+      return this.interactions.filter((interaction) => !this.consumedCallIds.has(interaction.call.callId));
+    }
     return this.interactions.slice(this.index);
   }
 
   consumedCount(): number {
+    if ((this.options.matchMode ?? "strict") === "call-id") {
+      return this.consumedCallIds.size;
+    }
     return this.index;
   }
 }

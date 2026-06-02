@@ -27,4 +27,26 @@ describe("TraceReplayer", () => {
 
     expect(replayer.replayTool("shell", { command: "different" })).toEqual({ exitCode: 0 });
   });
+
+  it("replays by call id without consuming positionally", () => {
+    const multiEvents: TraceEvent[] = [
+      { type: "session_start", schemaVersion: "1.0", sessionId: "s1" },
+      { type: "tool_call", callId: "c1", tool: "shell", args: { command: "npm test" } },
+      { type: "tool_result", callId: "c1", tool: "shell", ok: true, result: { exitCode: 0 } },
+      { type: "tool_call", callId: "c2", tool: "read_file", args: { path: "README.md" } },
+      { type: "tool_result", callId: "c2", tool: "read_file", ok: true, result: "readme" }
+    ];
+    const replayer = new TraceReplayer(multiEvents, { matchMode: "call-id" });
+
+    expect(replayer.replayToolByCallId("c2", { tool: "read_file", args: { path: "README.md" } })).toBe("readme");
+    expect(replayer.remaining().map((interaction) => interaction.call.callId)).toEqual(["c1"]);
+    expect(replayer.consumedCount()).toBe(1);
+    expect(() => replayer.replayToolByCallId("c2")).toThrow(ReplayMismatchError);
+  });
+
+  it("rejects positional replay in call-id mode", () => {
+    const replayer = new TraceReplayer(events, { matchMode: "call-id" });
+
+    expect(() => replayer.replayTool("shell", { command: "npm test" })).toThrow(ReplayMismatchError);
+  });
 });

@@ -30,6 +30,7 @@ describe("CLI", () => {
       await expect(runCli(["inspect", tracePath, "--format", "timeline-json"], io)).resolves.toBe(0);
       await expect(runCli(["validate", tracePath, "--format", "json"], io)).resolves.toBe(0);
       await expect(runCli(["replay", tracePath, "--tool", "shell", "--args-json", "{\"command\":\"npm test\"}"], io)).resolves.toBe(0);
+      await expect(runCli(["replay", tracePath, "--call-id", "call_1"], io)).resolves.toBe(1);
       const sanitizedPath = join(dir, "public.jsonl");
       await expect(runCli(["sanitize", tracePath, "--out", sanitizedPath, "--format", "json"], io)).resolves.toBe(0);
       expect((await readTraceFile(sanitizedPath)).length).toBe(4);
@@ -64,6 +65,29 @@ describe("CLI", () => {
       await expect(runCli(["sanitize", tracePath, "--out", sanitizedPath, "--allow-url-host", "github.com"], io)).resolves.toBe(0);
 
       expect(JSON.stringify(await readTraceFile(sanitizedPath))).toContain("https://github.com/drafter0364/agent-replay-kit");
+    });
+  });
+
+  it("replays recorded results by call id from the CLI", async () => {
+    await withTempDir(async (dir) => {
+      const tracePath = join(dir, "trace.jsonl");
+      await import("node:fs/promises").then(({ writeFile }) =>
+        writeFile(
+          tracePath,
+          [
+            "{\"type\":\"session_start\",\"schemaVersion\":\"1.0\",\"sessionId\":\"s1\"}",
+            "{\"type\":\"tool_call\",\"callId\":\"c1\",\"tool\":\"shell\",\"args\":{\"command\":\"npm test\"}}",
+            "{\"type\":\"tool_result\",\"callId\":\"c1\",\"tool\":\"shell\",\"ok\":true,\"result\":{\"exitCode\":0}}",
+            "{\"type\":\"session_end\",\"ok\":true}"
+          ].join("\n") + "\n",
+          "utf8"
+        )
+      );
+      const output: string[] = [];
+      const io = { stdout: (text: string) => output.push(text), stderr: (text: string) => output.push(text) };
+
+      await expect(runCli(["replay", tracePath, "--call-id", "c1", "--tool", "shell"], io)).resolves.toBe(0);
+      expect(output.join("")).toContain("\"exitCode\": 0");
     });
   });
 
