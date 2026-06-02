@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { runCli } from "../src/cli.js";
-import { readTraceFile } from "../src/index.js";
+import { readTraceFile, writeTraceFile } from "../src/index.js";
 import { withTempDir } from "./helpers.js";
 
 describe("CLI", () => {
@@ -181,6 +181,20 @@ describe("CLI", () => {
 
       await expect(runCli(["validate", tracePath], io)).resolves.toBe(1);
       expect(output.join("")).toContain("trace-missing-session-start");
+    });
+  });
+
+  it("validates gzip trace files from the CLI", async () => {
+    await withTempDir(async (dir) => {
+      const tracePath = join(dir, "trace.jsonl.gz");
+      const io = { stdout: (_text: string) => undefined, stderr: (_text: string) => undefined };
+
+      await writeTraceFile(tracePath, [
+        { type: "session_start", schemaVersion: "1.0", sessionId: "s1", seq: 1 },
+        { type: "session_end", sessionId: "s1", ok: true, seq: 2 }
+      ]);
+
+      await expect(runCli(["validate", tracePath], io)).resolves.toBe(0);
     });
   });
 });

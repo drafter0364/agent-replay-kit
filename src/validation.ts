@@ -1,4 +1,6 @@
-import { readFile } from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { createInterface } from "node:readline";
+import { createGunzip } from "node:zlib";
 import { DEFAULT_MAX_TRACE_LINE_LENGTH, validateTraceEvent } from "./schema.js";
 import type { TraceDiagnostic, TraceEvent, TraceValidationReport } from "./types.js";
 
@@ -14,14 +16,21 @@ export async function validateTraceFile(
   filePath: string,
   options: ValidateTraceTextOptions = {}
 ): Promise<ParsedTraceValidationReport> {
-  let raw: string;
+  const diagnostics: TraceDiagnostic[] = [];
+  const events: TraceEvent[] = [];
+  const maxLineLength = options.maxLineLength ?? DEFAULT_MAX_TRACE_LINE_LENGTH;
+  let lineNumber = 0;
+
   try {
-    raw = await readFile(filePath, "utf8");
+    for await (const line of readTraceLines(filePath)) {
+      lineNumber += 1;
+      validateLine(line, lineNumber, maxLineLength, diagnostics, events);
+    }
   } catch (error) {
     return {
       ok: false,
-      eventCount: 0,
-      events: [],
+      eventCount: events.length,
+      events,
       diagnostics: [
         {
           code: "trace-file-read-error",
@@ -30,7 +39,15 @@ export async function validateTraceFile(
       ]
     };
   }
-  return validateTraceText(raw, options);
+
+  diagnostics.push(...validateTrace(events).diagnostics);
+
+  return {
+    ok: diagnostics.length === 0,
+    eventCount: events.length,
+    events,
+    diagnostics
+  };
 }
 
 export function validateTraceText(raw: string, options: ValidateTraceTextOptions = {}): ParsedTraceValidationReport {
@@ -38,50 +55,9 @@ export function validateTraceText(raw: string, options: ValidateTraceTextOptions
   const events: TraceEvent[] = [];
   const maxLineLength = options.maxLineLength ?? DEFAULT_MAX_TRACE_LINE_LENGTH;
 
-  raw
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .forEach((line, index) => {
-      const lineNumber = index + 1;
-      if (line.length === 0) {
-        return;
-      }
-
-      if (line.length > maxLineLength) {
-        diagnostics.push({
-          code: "trace-line-too-large",
-          line: lineNumber,
-          message: `Trace line ${lineNumber} exceeds max length ${maxLineLength}`
-        });
-        return;
-      }
-
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(line);
-      } catch (error) {
-        diagnostics.push({
-          code: "trace-line-invalid-json",
-          line: lineNumber,
-          message: `Invalid JSON on trace line ${lineNumber}: ${error instanceof Error ? error.message : String(error)}`
-        });
-        return;
-      }
-
-      const eventValidation = validateTraceEvent(parsed);
-      if (!eventValidation.ok) {
-        for (const message of eventValidation.errors) {
-          diagnostics.push({
-            code: "trace-event-invalid",
-            line: lineNumber,
-            message
-          });
-        }
-        return;
-      }
-
-      events.push(parsed as TraceEvent);
-    });
+  raw.split(/\r?\n/).forEach((line, index) => {
+    validateLine(line, index + 1, maxLineLength, diagnostics, events);
+  });
 
   const traceValidation = validateTrace(events);
   diagnostics.push(...traceValidation.diagnostics);
@@ -92,6 +68,68 @@ export function validateTraceText(raw: string, options: ValidateTraceTextOptions
     events,
     diagnostics
   };
+}
+
+async function* readTraceLines(filePath: string): AsyncGenerator<string> {
+  const fileStream = createReadStream(filePath);
+  const input = filePath.endsWith(".gz") ? fileStream.pipe(createGunzip()) : fileStream;
+  input.setEncoding("utf8");
+  const lines = createInterface({
+    input,
+    crlfDelay: Infinity
+  });
+
+  for await (const line of lines) {
+    yield line;
+  }
+}
+
+function validateLine(
+  rawLine: string,
+  lineNumber: number,
+  maxLineLength: number,
+  diagnostics: TraceDiagnostic[],
+  events: TraceEvent[]
+): void {
+  const line = rawLine.trim();
+  if (line.length === 0) {
+    return;
+  }
+
+  if (line.length > maxLineLength) {
+    diagnostics.push({
+      code: "trace-line-too-large",
+      line: lineNumber,
+      message: `Trace line ${lineNumber} exceeds max length ${maxLineLength}`
+    });
+    return;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(line);
+  } catch (error) {
+    diagnostics.push({
+      code: "trace-line-invalid-json",
+      line: lineNumber,
+      message: `Invalid JSON on trace line ${lineNumber}: ${error instanceof Error ? error.message : String(error)}`
+    });
+    return;
+  }
+
+  const eventValidation = validateTraceEvent(parsed);
+  if (!eventValidation.ok) {
+    for (const message of eventValidation.errors) {
+      diagnostics.push({
+        code: "trace-event-invalid",
+        line: lineNumber,
+        message
+      });
+    }
+    return;
+  }
+
+  events.push(parsed as TraceEvent);
 }
 
 export function validateTrace(events: TraceEvent[]): TraceValidationReport {
