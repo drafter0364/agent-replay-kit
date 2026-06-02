@@ -76,6 +76,7 @@ export {
   assertTraceFile,
   renderAssertionMarkdown,
   type RequiredToolArgs,
+  type ToolSideEffect,
   type TraceAssertionConfig,
   type TraceAssertionFinding,
   type TraceAssertionReport

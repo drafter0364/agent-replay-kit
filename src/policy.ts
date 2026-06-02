@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import type { RequiredToolArgs, TraceAssertionConfig } from "./assert.js";
+import type { RequiredToolArgs, ToolSideEffect, TraceAssertionConfig } from "./assert.js";
 import type { JsonValue } from "./types.js";
 import { isJsonValue, isRecord } from "./utils.js";
 
@@ -27,6 +27,8 @@ export function parseAssertionPolicy(value: unknown, label = "policy"): TraceAss
   config.forbiddenCommandPatterns = optionalStringArray(value, "forbiddenCommandPatterns", label);
   config.requiredOrder = optionalStringArray(value, "requiredOrder", label);
   config.mustUseArgs = optionalRequiredToolArgs(value, "mustUseArgs", label);
+  config.forbiddenSideEffects = optionalSideEffectArray(value, "forbiddenSideEffects", label);
+  config.requiredSideEffectOrder = optionalSideEffectArray(value, "requiredSideEffectOrder", label);
 
   if ("maxShellCalls" in value) {
     if (typeof value.maxShellCalls !== "number" || !Number.isInteger(value.maxShellCalls) || value.maxShellCalls < 0) {
@@ -69,24 +71,47 @@ export function parseAssertionPolicy(value: unknown, label = "policy"): TraceAss
     }
   }
 
+  if ("maxSideEffectCalls" in value) {
+    if (!isRecord(value.maxSideEffectCalls)) {
+      throw new Error(`${label}.maxSideEffectCalls must be an object`);
+    }
+    config.maxSideEffectCalls = {};
+    for (const [sideEffect, max] of Object.entries(value.maxSideEffectCalls)) {
+      if (!isToolSideEffect(sideEffect)) {
+        throw new Error(`${label}.maxSideEffectCalls.${sideEffect} must be a supported side effect`);
+      }
+      if (typeof max !== "number" || !Number.isInteger(max) || max < 0) {
+        throw new Error(`${label}.maxSideEffectCalls.${sideEffect} must be a non-negative integer`);
+      }
+      config.maxSideEffectCalls[sideEffect] = max;
+    }
+  }
+
   return config;
 }
 
 export function mergeAssertionConfigs(base: TraceAssertionConfig, override: TraceAssertionConfig): TraceAssertionConfig {
   const mustUseArgs = [...(base.mustUseArgs ?? []), ...(override.mustUseArgs ?? [])];
-  const merged: TraceAssertionConfig = {
-    ...base,
-    mustCall: mergeArrays(base.mustCall, override.mustCall),
-    mustNotCall: mergeArrays(base.mustNotCall, override.mustNotCall),
-    forbiddenCommands: mergeArrays(base.forbiddenCommands, override.forbiddenCommands),
-    forbiddenCommandPrefixes: mergeArrays(base.forbiddenCommandPrefixes, override.forbiddenCommandPrefixes),
-    forbiddenCommandPatterns: mergeArrays(base.forbiddenCommandPatterns, override.forbiddenCommandPatterns),
-    requiredOrder: override.requiredOrder ?? base.requiredOrder,
-    maxToolCalls: {
-      ...(base.maxToolCalls ?? {}),
-      ...(override.maxToolCalls ?? {})
-    }
-  };
+  const maxToolCalls = { ...(base.maxToolCalls ?? {}), ...(override.maxToolCalls ?? {}) };
+  const maxSideEffectCalls = { ...(base.maxSideEffectCalls ?? {}), ...(override.maxSideEffectCalls ?? {}) };
+  const merged: TraceAssertionConfig = {};
+  setIfDefined(merged, "mustCall", mergeArrays(base.mustCall, override.mustCall));
+  setIfDefined(merged, "mustNotCall", mergeArrays(base.mustNotCall, override.mustNotCall));
+  setIfDefined(merged, "forbiddenCommands", mergeArrays(base.forbiddenCommands, override.forbiddenCommands));
+  setIfDefined(merged, "forbiddenCommandPrefixes", mergeArrays(base.forbiddenCommandPrefixes, override.forbiddenCommandPrefixes));
+  setIfDefined(merged, "forbiddenCommandPatterns", mergeArrays(base.forbiddenCommandPatterns, override.forbiddenCommandPatterns));
+  setIfDefined(merged, "requiredOrder", override.requiredOrder ?? base.requiredOrder);
+  setIfDefined(merged, "forbiddenSideEffects", mergeSideEffects(base.forbiddenSideEffects, override.forbiddenSideEffects));
+  setIfDefined(merged, "requiredSideEffectOrder", override.requiredSideEffectOrder ?? base.requiredSideEffectOrder);
+  if (Object.keys(maxToolCalls).length > 0) {
+    merged.maxToolCalls = maxToolCalls;
+  }
+  if (Object.keys(maxSideEffectCalls).length > 0) {
+    merged.maxSideEffectCalls = maxSideEffectCalls;
+  }
+  if (base.maxShellCalls !== undefined) {
+    merged.maxShellCalls = base.maxShellCalls;
+  }
   if (mustUseArgs.length > 0) {
     merged.mustUseArgs = mustUseArgs;
   }
@@ -105,6 +130,16 @@ export function mergeAssertionConfigs(base: TraceAssertionConfig, override: Trac
   return merged;
 }
 
+function setIfDefined<K extends keyof TraceAssertionConfig>(
+  config: TraceAssertionConfig,
+  key: K,
+  value: TraceAssertionConfig[K] | undefined
+): void {
+  if (value !== undefined) {
+    config[key] = value;
+  }
+}
+
 function optionalStringArray(value: Record<string, unknown>, key: string, label: string): string[] | undefined {
   if (!(key in value)) {
     return undefined;
@@ -119,6 +154,11 @@ function optionalStringArray(value: Record<string, unknown>, key: string, label:
 function mergeArrays(base?: string[], override?: string[]): string[] | undefined {
   const merged = [...(base ?? []), ...(override ?? [])];
   return merged.length > 0 ? Array.from(new Set(merged)) : undefined;
+}
+
+function mergeSideEffects(base?: ToolSideEffect[], override?: ToolSideEffect[]): ToolSideEffect[] | undefined {
+  const merged = mergeArrays(base, override);
+  return merged as ToolSideEffect[] | undefined;
 }
 
 function optionalRequiredToolArgs(value: Record<string, unknown>, key: string, label: string): RequiredToolArgs[] | undefined {
@@ -155,4 +195,21 @@ function optionalRequiredToolArgs(value: Record<string, unknown>, key: string, l
       args
     };
   });
+}
+
+function optionalSideEffectArray(value: Record<string, unknown>, key: string, label: string): ToolSideEffect[] | undefined {
+  const items = optionalStringArray(value, key, label);
+  if (!items) {
+    return undefined;
+  }
+  for (const item of items) {
+    if (!isToolSideEffect(item)) {
+      throw new Error(`${label}.${key} contains unsupported side effect ${item}`);
+    }
+  }
+  return items.filter(isToolSideEffect);
+}
+
+function isToolSideEffect(value: string): value is ToolSideEffect {
+  return value === "read" || value === "write" || value === "network" || value === "external-state" || value === "secret-access";
 }

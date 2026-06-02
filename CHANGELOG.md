@@ -15,3 +15,4 @@
 - Added contract assertions for required args, tool duration, failed tools, and successful session end.
 - Added a composite GitHub Action wrapper.
 - Added a framework-neutral adapter contract.
+- Added side-effect classification assertions for tool metadata.

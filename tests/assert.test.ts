@@ -60,4 +60,23 @@ describe("trace assertions", () => {
     expect(assertTrace(events, { mustEndOk: true }).ok).toBe(false);
     expect(assertTrace([{ type: "session_end", ok: true }], { mustEndOk: true }).ok).toBe(true);
   });
+
+  it("checks side-effect metadata contracts", () => {
+    const sideEffectEvents: TraceEvent[] = [
+      { type: "tool_call", callId: "c1", tool: "read_file", args: {}, metadata: { sideEffect: "read" } },
+      { type: "tool_call", callId: "c2", tool: "http", args: {}, metadata: { sideEffect: "network" } },
+      { type: "tool_call", callId: "c3", tool: "write_file", args: {}, metadata: { sideEffect: "write" } }
+    ];
+
+    expect(
+      assertTrace(sideEffectEvents, {
+        forbiddenSideEffects: ["external-state"],
+        maxSideEffectCalls: { network: 1 },
+        requiredSideEffectOrder: ["read", "write"]
+      }).ok
+    ).toBe(true);
+    expect(assertTrace(sideEffectEvents, { forbiddenSideEffects: ["network"] }).ok).toBe(false);
+    expect(assertTrace(sideEffectEvents, { maxSideEffectCalls: { network: 0 } }).ok).toBe(false);
+    expect(assertTrace(sideEffectEvents, { requiredSideEffectOrder: ["write", "read"] }).ok).toBe(false);
+  });
 });

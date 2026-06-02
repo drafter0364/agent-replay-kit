@@ -5,6 +5,10 @@
   "maxDurationMs": 1000,
   "noFailedTools": true,
   "mustEndOk": true,
+  "forbiddenSideEffects": ["external-state"],
+  "maxSideEffectCalls": {
+    "network": 1
+  },
   "mustUseArgs": [
     {
       "tool": "shell",

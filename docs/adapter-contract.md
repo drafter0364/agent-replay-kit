@@ -51,6 +51,18 @@ Supported `sideEffect` values:
 
 These values are optional but useful for policy assertions and timeline summaries.
 
+Policy files can constrain side effects:
+
+```json
+{
+  "forbiddenSideEffects": ["external-state"],
+  "maxSideEffectCalls": {
+    "network": 1
+  },
+  "requiredSideEffectOrder": ["read", "write"]
+}
+```
+
 ## Adapter shape
 
 A minimal adapter should expose a wrapper rather than require users to rewrite their agent:

@@ -7,6 +7,8 @@ export interface RequiredToolArgs {
   args: Record<string, JsonValue>;
 }
 
+export type ToolSideEffect = "read" | "write" | "network" | "external-state" | "secret-access";
+
 export interface TraceAssertionConfig {
   mustCall?: string[];
   mustNotCall?: string[];
@@ -16,6 +18,9 @@ export interface TraceAssertionConfig {
   noFailedTools?: boolean;
   mustEndOk?: boolean;
   mustUseArgs?: RequiredToolArgs[];
+  forbiddenSideEffects?: ToolSideEffect[];
+  maxSideEffectCalls?: Partial<Record<ToolSideEffect, number>>;
+  requiredSideEffectOrder?: ToolSideEffect[];
   forbiddenCommands?: string[];
   forbiddenCommandPrefixes?: string[];
   forbiddenCommandPatterns?: string[];
@@ -120,6 +125,48 @@ export function assertTrace(events: TraceEvent[], config: TraceAssertionConfig):
       message: ok
         ? `Tool ${requirement.tool} used required args ${stableStringify(requirement.args)}`
         : `Tool ${requirement.tool} did not use required args ${stableStringify(requirement.args)}`
+    });
+  }
+
+  for (const sideEffect of config.forbiddenSideEffects ?? []) {
+    const offenders = calls.filter((call) => getSideEffect(call) === sideEffect);
+    findings.push({
+      name: `forbidden-side-effect:${sideEffect}`,
+      ok: offenders.length === 0,
+      message:
+        offenders.length === 0
+          ? `No tool call used side effect ${sideEffect}`
+          : `${offenders.length} tool call(s) used forbidden side effect ${sideEffect}`
+    });
+  }
+
+  for (const [sideEffect, max] of Object.entries(config.maxSideEffectCalls ?? {}) as Array<[ToolSideEffect, number]>) {
+    const count = calls.filter((call) => getSideEffect(call) === sideEffect).length;
+    const ok = count <= max;
+    findings.push({
+      name: `max-side-effect-calls:${sideEffect}`,
+      ok,
+      message: ok ? `Side effect ${sideEffect} used ${count}/${max} times` : `Side effect ${sideEffect} used ${count} times, max is ${max}`
+    });
+  }
+
+  if (config.requiredSideEffectOrder && config.requiredSideEffectOrder.length > 0) {
+    let cursor = -1;
+    let ok = true;
+    for (const sideEffect of config.requiredSideEffectOrder) {
+      const nextIndex = calls.findIndex((call, index) => index > cursor && getSideEffect(call) === sideEffect);
+      if (nextIndex === -1) {
+        ok = false;
+        break;
+      }
+      cursor = nextIndex;
+    }
+    findings.push({
+      name: "required-side-effect-order",
+      ok,
+      message: ok
+        ? `Side effects appeared in required order: ${config.requiredSideEffectOrder.join(" -> ")}`
+        : `Side effects did not appear in required order: ${config.requiredSideEffectOrder.join(" -> ")}`
     });
   }
 
@@ -258,6 +305,20 @@ function getCommand(args: unknown): string | undefined {
   }
   const value = args.command ?? args.cmd ?? args.script;
   return typeof value === "string" ? value : undefined;
+}
+
+function getSideEffect(call: TraceEvent & { type: "tool_call" }): ToolSideEffect | undefined {
+  const sideEffect = call.metadata?.sideEffect;
+  if (
+    sideEffect === "read" ||
+    sideEffect === "write" ||
+    sideEffect === "network" ||
+    sideEffect === "external-state" ||
+    sideEffect === "secret-access"
+  ) {
+    return sideEffect;
+  }
+  return undefined;
 }
 
 function argsInclude(actual: unknown, expected: Record<string, JsonValue>): boolean {
