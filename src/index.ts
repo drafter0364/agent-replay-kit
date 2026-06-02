@@ -44,7 +44,23 @@ export {
   TraceReplayer,
   type ReplayOptions
 } from "./replay.js";
-export { diffTraceFiles, diffTraces, renderTraceDiffMarkdown, type TraceChange, type TraceDiff } from "./diff.js";
+export {
+  diffTraceFiles,
+  diffTraces,
+  diffTracesPositional,
+  diffTracesSemantic,
+  renderTraceDiffMarkdown,
+  type TraceChange,
+  type TraceDiff,
+  type TraceDiffMode,
+  type TraceDiffOptions
+} from "./diff.js";
+export {
+  renderGoldenTraceRegressionMarkdown,
+  testGoldenTraceRegression,
+  testGoldenTraceRegressionFiles,
+  type GoldenTraceRegressionReport
+} from "./regression.js";
 export {
   sanitizeTraceEvents,
   sanitizeTraceEventsWithReport,

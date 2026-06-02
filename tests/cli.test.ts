@@ -65,6 +65,7 @@ describe("CLI", () => {
       );
 
       await expect(runCli(["assert", tracePath, "--policy", policyPath], io)).resolves.toBe(0);
+      await expect(runCli(["test", "--baseline", tracePath, "--actual", tracePath, "--policy", policyPath], io)).resolves.toBe(0);
     });
   });
 

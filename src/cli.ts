@@ -10,6 +10,7 @@ import { renderTraceSummaryMarkdown, summarizeTraceFile } from "./inspect.js";
 import type { JsonValue } from "./types.js";
 import { renderTraceValidationMarkdown, validateTraceFile } from "./validation.js";
 import { mergeAssertionConfigs, readAssertionPolicyFile } from "./policy.js";
+import { renderGoldenTraceRegressionMarkdown, testGoldenTraceRegressionFiles } from "./regression.js";
 
 interface CliIo {
   stdout: (text: string) => void;
@@ -30,6 +31,7 @@ Commands:
   diff old.jsonl new.jsonl [--format markdown|json]
   sanitize trace.jsonl --out public.jsonl [--format text|json]
   assert trace.jsonl [--policy policy.json] [--must-call tool] [--must-not-call tool] [--max-shell-calls n]
+  test --baseline golden.jsonl --actual current.jsonl [--policy policy.json]
   validate trace.jsonl [--format markdown|json]
   inspect trace.jsonl [--format markdown|json]
 `;
@@ -51,6 +53,8 @@ export async function runCli(argv: string[], io: CliIo = defaultIo): Promise<num
         return await runReplay(parsed, io);
       case "diff":
         return await runDiff(parsed, io);
+      case "test":
+        return await runTest(parsed, io);
       case "sanitize":
         return await runSanitize(parsed, io);
       case "assert":
@@ -138,9 +142,21 @@ async function runDiff(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const before = requiredPositional(parsed, 0, "old trace file");
   const after = requiredPositional(parsed, 1, "new trace file");
   const format = optionalOption(parsed, "format") ?? "markdown";
-  const diff = await diffTraceFiles(before, after);
+  const mode = parseDiffMode(optionalOption(parsed, "mode") ?? "positional");
+  const diff = await diffTraceFiles(before, after, { mode });
   io.stdout(format === "json" ? JSON.stringify(diff, null, 2) + "\n" : renderTraceDiffMarkdown(diff));
   return diff.changed ? 1 : 0;
+}
+
+async function runTest(parsed: ParsedArgs, io: CliIo): Promise<number> {
+  const baseline = requiredOption(parsed, "baseline");
+  const actual = requiredOption(parsed, "actual");
+  const format = optionalOption(parsed, "format") ?? "markdown";
+  const policyPath = optionalOption(parsed, "policy");
+  const policy = policyPath ? await readAssertionPolicyFile(policyPath) : {};
+  const report = await testGoldenTraceRegressionFiles(baseline, actual, policy);
+  io.stdout(format === "json" ? JSON.stringify(report, null, 2) + "\n" : renderGoldenTraceRegressionMarkdown(report));
+  return report.ok ? 0 : 1;
 }
 
 async function runSanitize(parsed: ParsedArgs, io: CliIo): Promise<number> {
@@ -241,6 +257,13 @@ function parseJsonOption(parsed: ParsedArgs, name: string, fallback: JsonValue):
     return fallback;
   }
   return JSON.parse(value) as JsonValue;
+}
+
+function parseDiffMode(value: string): "positional" | "semantic" {
+  if (value !== "positional" && value !== "semantic") {
+    throw new Error("--mode must be positional or semantic");
+  }
+  return value;
 }
 
 const defaultIo: CliIo = {

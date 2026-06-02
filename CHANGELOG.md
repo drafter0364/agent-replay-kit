@@ -9,3 +9,4 @@
 - Added trace validation hardening and a `validate` CLI command.
 - Added sanitizer validation and redaction reports.
 - Added JSON assertion policies and safer forbidden command rules.
+- Added semantic trace diffing and golden trace regression testing.

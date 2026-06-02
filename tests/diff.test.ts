@@ -18,4 +18,25 @@ describe("trace diff", () => {
     expect(diff.summary.modified).toBe(1);
     expect(renderTraceDiffMarkdown(diff)).toContain("Changed tool_call -> tool_call");
   });
+
+  it("semantically matches tool calls by callId when model messages are inserted", () => {
+    const before: TraceEvent[] = [
+      { type: "session_start", schemaVersion: "1.0", sessionId: "s1" },
+      { type: "tool_call", callId: "c1", tool: "shell", args: { command: "npm test" } },
+      { type: "tool_result", callId: "c1", tool: "shell", ok: true, result: { exitCode: 0 } },
+      { type: "session_end", ok: true }
+    ];
+    const after: TraceEvent[] = [
+      { type: "session_start", schemaVersion: "1.0", sessionId: "s1" },
+      { type: "model_message", role: "assistant", content: "I will run tests." },
+      { type: "tool_call", callId: "c1", tool: "shell", args: { command: "npm test" } },
+      { type: "tool_result", callId: "c1", tool: "shell", ok: true, result: { exitCode: 0 } },
+      { type: "session_end", ok: true }
+    ];
+    const diff = diffTraces(before, after, { mode: "semantic" });
+
+    expect(diff.mode).toBe("semantic");
+    expect(diff.changes).toHaveLength(1);
+    expect(diff.changes[0].after?.type).toBe("model_message");
+  });
 });

@@ -16,6 +16,15 @@ The same policy can be stored in JSON:
 agent-replay assert examples/traces/sample.jsonl --policy examples/agent-replay.policy.json
 ```
 
+Compare a current run against a golden trace:
+
+```bash
+agent-replay test \
+  --baseline examples/traces/sample.jsonl \
+  --actual examples/traces/sample.jsonl \
+  --policy examples/agent-replay.policy.json
+```
+
 Suggested GitHub Actions step:
 
 ```yaml
@@ -24,5 +33,9 @@ Suggested GitHub Actions step:
     npm ci
     npm run build
     node dist/cli.js assert examples/traces/sample.jsonl \
+      --policy examples/agent-replay.policy.json
+    node dist/cli.js test \
+      --baseline examples/traces/sample.jsonl \
+      --actual examples/traces/sample.jsonl \
       --policy examples/agent-replay.policy.json
 ```
