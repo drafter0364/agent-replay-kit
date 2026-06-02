@@ -28,3 +28,4 @@
 - Added an optional OpenAI Agents SDK tool wrapper example.
 - Added GitHub Action support for trace analysis mode.
 - Expanded sanitizer coverage for common high-confidence service tokens.
+- Added an optional LangChain JS tool wrapper example.
