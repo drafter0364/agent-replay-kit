@@ -27,3 +27,4 @@
 - Streamed trace file validation and support for validating `.jsonl.gz` traces.
 - Added an optional OpenAI Agents SDK tool wrapper example.
 - Added GitHub Action support for trace analysis mode.
+- Expanded sanitizer coverage for common high-confidence service tokens.

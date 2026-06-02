@@ -36,6 +36,11 @@ export interface SanitizedTrace {
 
 const sensitiveKey = /(?:api[_-]?key|token|secret|password|authorization|cookie|credential)/i;
 const defaultRules: SanitizerRule[] = [
+  { name: "github-token", pattern: /\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{20,255}\b/g, replacement: "[GITHUB_TOKEN]", confidence: "high" },
+  { name: "github-fine-grained-token", pattern: /\bgithub_pat_[A-Za-z0-9_]{20,255}\b/g, replacement: "[GITHUB_TOKEN]", confidence: "high" },
+  { name: "aws-access-key", pattern: /\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/g, replacement: "[AWS_ACCESS_KEY]", confidence: "high" },
+  { name: "slack-token", pattern: /\bxox[baprs]-[A-Za-z0-9-]{10,}\b/g, replacement: "[SLACK_TOKEN]", confidence: "high" },
+  { name: "npm-token", pattern: /\bnpm_[A-Za-z0-9]{36}\b/g, replacement: "[NPM_TOKEN]", confidence: "high" },
   { name: "openai-api-key", pattern: /\bsk-[A-Za-z0-9_-]{8,}\b/g, replacement: "sk-[REDACTED]", confidence: "high" },
   { name: "bearer-token", pattern: /\bBearer\s+[A-Za-z0-9._~+/=-]+\b/g, replacement: "Bearer [REDACTED]", confidence: "high" },
   { name: "email", pattern: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, replacement: "[EMAIL]", confidence: "medium" },

@@ -14,7 +14,7 @@ The library validates event structure before parsing trace files, but it does no
 
 ## Sanitization limits
 
-The default sanitizer redacts common secrets, bearer tokens, email addresses, URLs, and local paths. It is a safety layer, not a guarantee. Review sanitized traces before publishing them.
+The default sanitizer redacts common secrets, bearer tokens, high-confidence service tokens such as GitHub, AWS access, Slack, and npm tokens, email addresses, URLs, and local paths. It is a safety layer, not a guarantee. Review sanitized traces before publishing them.
 
 Recommended workflow:
 
