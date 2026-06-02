@@ -14,6 +14,7 @@ Starts a trace session.
   "schemaVersion": "1.0",
   "sessionId": "session_123",
   "agent": "repo-maintainer-agent",
+  "runId": "github-run-123",
   "input": {
     "prompt": "review this pull request"
   }
@@ -100,6 +101,7 @@ Ends a trace session.
 {
   "type": "session_end",
   "ok": true,
+  "durationMs": 2400,
   "summary": "All checks passed"
 }
 ```
@@ -121,6 +123,17 @@ Replay consumes `tool_call` events in order and returns the matching `tool_resul
 - `tool-only` mode requires only the tool name to match.
 - Recorded failed tool results are replayed as errors.
 - Missing results are treated as trace corruption.
+
+## Trace validation
+
+`agent-replay validate trace.jsonl` validates both individual events and the full trace:
+
+- `session_start` must be the first event.
+- `session_end` must appear once and no events may follow it.
+- `seq` values, when present, must be positive and strictly increasing.
+- `tool_result` must match a previous `tool_call`.
+- Each `tool_call` must have at most one result.
+- Event JSONL lines are limited to 1 MB by default.
 
 ## Privacy model
 

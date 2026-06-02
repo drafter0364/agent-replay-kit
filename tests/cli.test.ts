@@ -27,12 +27,14 @@ describe("CLI", () => {
 
       expect((await readTraceFile(tracePath)).length).toBe(4);
       await expect(runCli(["inspect", tracePath, "--format", "json"], io)).resolves.toBe(0);
+      await expect(runCli(["validate", tracePath, "--format", "json"], io)).resolves.toBe(0);
       await expect(runCli(["replay", tracePath, "--tool", "shell", "--args-json", "{\"command\":\"npm test\"}"], io)).resolves.toBe(0);
       const sanitizedPath = join(dir, "public.jsonl");
       await expect(runCli(["sanitize", tracePath, "--out", sanitizedPath], io)).resolves.toBe(0);
       expect((await readTraceFile(sanitizedPath)).length).toBe(4);
       await expect(runCli(["assert", tracePath, "--must-call", "shell"], io)).resolves.toBe(0);
       expect(output.join("")).toContain("\"exitCode\": 0");
+      expect(output.join("")).toContain("\"eventCount\": 4");
     });
   });
 
@@ -47,6 +49,20 @@ describe("CLI", () => {
 
       await expect(runCli(["diff", one, two], io)).resolves.toBe(1);
       await expect(runCli(["assert", one, "--must-not-call", "shell"], io)).resolves.toBe(1);
+    });
+  });
+
+  it("reports validation failures from the CLI", async () => {
+    await withTempDir(async (dir) => {
+      const tracePath = join(dir, "invalid.jsonl");
+      await import("node:fs/promises").then(({ writeFile }) =>
+        writeFile(tracePath, "{\"type\":\"tool_call\",\"callId\":\"c1\",\"tool\":\"shell\",\"args\":{}}\n", "utf8")
+      );
+      const output: string[] = [];
+      const io = { stdout: (text: string) => output.push(text), stderr: (text: string) => output.push(text) };
+
+      await expect(runCli(["validate", tracePath], io)).resolves.toBe(1);
+      expect(output.join("")).toContain("trace-missing-session-start");
     });
   });
 });

@@ -8,6 +8,7 @@ import { collectToolInteractions, createReplayerFromFile } from "./replay.js";
 import { sanitizeTraceFile } from "./sanitize.js";
 import { renderTraceSummaryMarkdown, summarizeTraceFile } from "./inspect.js";
 import type { JsonValue } from "./types.js";
+import { renderTraceValidationMarkdown, validateTraceFile } from "./validation.js";
 
 interface CliIo {
   stdout: (text: string) => void;
@@ -28,6 +29,7 @@ Commands:
   diff old.jsonl new.jsonl [--format markdown|json]
   sanitize trace.jsonl --out public.jsonl
   assert trace.jsonl [--must-call tool] [--must-not-call tool] [--max-shell-calls n]
+  validate trace.jsonl [--format markdown|json]
   inspect trace.jsonl [--format markdown|json]
 `;
 
@@ -52,6 +54,8 @@ export async function runCli(argv: string[], io: CliIo = defaultIo): Promise<num
         return await runSanitize(parsed, io);
       case "assert":
         return await runAssert(parsed, io);
+      case "validate":
+        return await runValidate(parsed, io);
       case "inspect":
         return await runInspect(parsed, io);
       default:
@@ -157,6 +161,14 @@ async function runAssert(parsed: ParsedArgs, io: CliIo): Promise<number> {
   };
   const report = await assertTraceFile(trace, config);
   io.stdout(format === "json" ? JSON.stringify(report, null, 2) + "\n" : renderAssertionMarkdown(report));
+  return report.ok ? 0 : 1;
+}
+
+async function runValidate(parsed: ParsedArgs, io: CliIo): Promise<number> {
+  const trace = requiredPositional(parsed, 0, "trace file");
+  const format = optionalOption(parsed, "format") ?? "markdown";
+  const report = await validateTraceFile(trace);
+  io.stdout(format === "json" ? JSON.stringify(report, null, 2) + "\n" : renderTraceValidationMarkdown(report));
   return report.ok ? 0 : 1;
 }
 

@@ -41,6 +41,7 @@ Inspect and replay it:
 
 ```bash
 node dist/cli.js inspect traces/demo.jsonl
+node dist/cli.js validate traces/demo.jsonl
 node dist/cli.js replay traces/demo.jsonl --tool shell --args-json '{"command":"npm test"}'
 ```
 
@@ -82,6 +83,7 @@ agent-replay replay trace.jsonl [--tool name --args-json '{}']
 agent-replay diff old.jsonl new.jsonl [--format markdown|json]
 agent-replay sanitize trace.jsonl --out public.jsonl
 agent-replay assert trace.jsonl [--must-call tool] [--must-not-call tool] [--max-shell-calls n]
+agent-replay validate trace.jsonl [--format markdown|json]
 agent-replay inspect trace.jsonl [--format markdown|json]
 ```
 

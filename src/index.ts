@@ -13,10 +13,27 @@ export type {
   TraceBaseEvent,
   TraceEvent,
   TraceEventType,
+  TraceDiagnostic,
+  TraceValidationReport,
   TraceValidationResult
 } from "./types.js";
 
-export { assertTraceEvent, isTraceEvent, parseTraceLine, validateTraceEvent } from "./schema.js";
+export {
+  DEFAULT_MAX_TRACE_LINE_LENGTH,
+  assertTraceEvent,
+  isTraceEvent,
+  parseTraceLine,
+  validateTraceEvent,
+  type ParseTraceLineOptions
+} from "./schema.js";
+export {
+  renderTraceValidationMarkdown,
+  validateTrace,
+  validateTraceFile,
+  validateTraceText,
+  type ParsedTraceValidationReport,
+  type ValidateTraceTextOptions
+} from "./validation.js";
 export { appendTraceEvent, readTraceFile, writeTraceFile } from "./io.js";
 export { createRecorder, TraceRecorder, type RecorderOptions, type SessionEndOptions } from "./recorder.js";
 export {

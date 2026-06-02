@@ -8,7 +8,13 @@ import type {
   TraceEvent,
   TraceValidationResult
 } from "./types.js";
-import { isRecord } from "./utils.js";
+import { isJsonValue, isRecord } from "./utils.js";
+
+export const DEFAULT_MAX_TRACE_LINE_LENGTH = 1024 * 1024;
+
+export interface ParseTraceLineOptions {
+  maxLineLength?: number;
+}
 
 const eventTypes = new Set([
   "session_start",
@@ -33,6 +39,8 @@ export function validateTraceEvent(value: unknown): TraceValidationResult {
 
   if ("seq" in value && typeof value.seq !== "number") {
     errors.push("event.seq must be a number");
+  } else if ("seq" in value && typeof value.seq === "number" && (!Number.isInteger(value.seq) || value.seq < 1)) {
+    errors.push("event.seq must be a positive integer");
   }
   if ("timestamp" in value && typeof value.timestamp !== "string") {
     errors.push("event.timestamp must be an ISO string");
@@ -79,7 +87,12 @@ export function assertTraceEvent(value: unknown): asserts value is TraceEvent {
   }
 }
 
-export function parseTraceLine(line: string, lineNumber = 0): TraceEvent {
+export function parseTraceLine(line: string, lineNumber = 0, options: ParseTraceLineOptions = {}): TraceEvent {
+  const maxLineLength = options.maxLineLength ?? DEFAULT_MAX_TRACE_LINE_LENGTH;
+  if (line.length > maxLineLength) {
+    throw new Error(`Trace line ${lineNumber} exceeds max length ${maxLineLength}`);
+  }
+
   let parsed: unknown;
   try {
     parsed = JSON.parse(line);
@@ -107,6 +120,12 @@ function validateSessionStart(value: Record<string, unknown>, errors: string[]):
   if ("agent" in event && typeof event.agent !== "string") {
     errors.push("session_start.agent must be a string");
   }
+  if ("runId" in event && typeof event.runId !== "string") {
+    errors.push("session_start.runId must be a string");
+  }
+  if ("input" in event && !isJsonValue(event.input)) {
+    errors.push("session_start.input must be a JSON value");
+  }
 }
 
 function validateModelMessage(value: Record<string, unknown>, errors: string[]): void {
@@ -119,6 +138,24 @@ function validateModelMessage(value: Record<string, unknown>, errors: string[]):
   }
   if ("toolCalls" in event && !Array.isArray(event.toolCalls)) {
     errors.push("model_message.toolCalls must be an array");
+  } else if (Array.isArray(event.toolCalls)) {
+    event.toolCalls.forEach((toolCall, index) => {
+      if (!isRecord(toolCall)) {
+        errors.push(`model_message.toolCalls[${index}] must be an object`);
+        return;
+      }
+      if (typeof toolCall.callId !== "string" || toolCall.callId.length === 0) {
+        errors.push(`model_message.toolCalls[${index}].callId must be a non-empty string`);
+      }
+      if (typeof toolCall.tool !== "string" || toolCall.tool.length === 0) {
+        errors.push(`model_message.toolCalls[${index}].tool must be a non-empty string`);
+      }
+      if (!("args" in toolCall)) {
+        errors.push(`model_message.toolCalls[${index}].args is required`);
+      } else if (!isJsonValue(toolCall.args)) {
+        errors.push(`model_message.toolCalls[${index}].args must be a JSON value`);
+      }
+    });
   }
 }
 
@@ -132,6 +169,8 @@ function validateToolCall(value: Record<string, unknown>, errors: string[]): voi
   }
   if (!("args" in event)) {
     errors.push("tool_call.args is required");
+  } else if (!isJsonValue(event.args)) {
+    errors.push("tool_call.args must be a JSON value");
   }
 }
 
@@ -149,8 +188,24 @@ function validateToolResult(value: Record<string, unknown>, errors: string[]): v
   if (event.ok === false && (!event.error || typeof event.error.message !== "string")) {
     errors.push("tool_result.error.message is required when ok is false");
   }
+  if (event.ok === true && !("result" in event)) {
+    errors.push("tool_result.result is required when ok is true");
+  }
+  if ("result" in event && !isJsonValue(event.result)) {
+    errors.push("tool_result.result must be a JSON value");
+  }
+  if (event.error) {
+    if ("name" in event.error && typeof event.error.name !== "string") {
+      errors.push("tool_result.error.name must be a string");
+    }
+    if ("stack" in event.error && typeof event.error.stack !== "string") {
+      errors.push("tool_result.error.stack must be a string");
+    }
+  }
   if ("durationMs" in event && typeof event.durationMs !== "number") {
     errors.push("tool_result.durationMs must be a number");
+  } else if ("durationMs" in event && typeof event.durationMs === "number" && event.durationMs < 0) {
+    errors.push("tool_result.durationMs must be non-negative");
   }
 }
 
@@ -162,6 +217,9 @@ function validateAssertion(value: Record<string, unknown>, errors: string[]): vo
   if (typeof event.ok !== "boolean") {
     errors.push("assertion.ok must be a boolean");
   }
+  if ("message" in event && typeof event.message !== "string") {
+    errors.push("assertion.message must be a string");
+  }
 }
 
 function validateSessionEnd(value: Record<string, unknown>, errors: string[]): void {
@@ -171,6 +229,8 @@ function validateSessionEnd(value: Record<string, unknown>, errors: string[]): v
   }
   if ("durationMs" in event && typeof event.durationMs !== "number") {
     errors.push("session_end.durationMs must be a number");
+  } else if ("durationMs" in event && typeof event.durationMs === "number" && event.durationMs < 0) {
+    errors.push("session_end.durationMs must be non-negative");
   }
   if ("summary" in event && typeof event.summary !== "string") {
     errors.push("session_end.summary must be a string");

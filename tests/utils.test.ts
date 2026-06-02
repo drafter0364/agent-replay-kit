@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createId, isJsonObject, isRecord, stableStringify, toJsonValue } from "../src/utils.js";
+import { createId, isJsonObject, isJsonValue, isRecord, stableStringify, toJsonValue } from "../src/utils.js";
 
 describe("utils", () => {
   it("creates prefixed UUID ids", () => {
@@ -21,5 +21,11 @@ describe("utils", () => {
 
   it("normalizes undefined as null for JSON values", () => {
     expect(toJsonValue(undefined)).toBeNull();
+  });
+
+  it("detects JSON values", () => {
+    expect(isJsonValue({ nested: [1, "two", null] })).toBe(true);
+    expect(isJsonValue({ nope: undefined })).toBe(false);
+    expect(isJsonValue(Number.NaN)).toBe(false);
   });
 });

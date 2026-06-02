@@ -99,3 +99,17 @@ export interface TraceValidationResult {
   ok: boolean;
   errors: string[];
 }
+
+export interface TraceDiagnostic {
+  code: string;
+  message: string;
+  line?: number;
+  seq?: number;
+  eventType?: TraceEventType;
+}
+
+export interface TraceValidationReport {
+  ok: boolean;
+  eventCount: number;
+  diagnostics: TraceDiagnostic[];
+}
