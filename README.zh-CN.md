@@ -50,6 +50,8 @@ node dist/cli.js assert traces/demo.jsonl \
   --forbid-command-prefix "rm -rf"
 ```
 
+JSON policy 还可以表达 Agent 行为契约：工具调用顺序、必需参数、最长工具耗时、禁止失败工具，以及 session 必须成功结束。
+
 ## SDK 示例
 
 ```ts

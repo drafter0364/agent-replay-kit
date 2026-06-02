@@ -54,6 +54,8 @@ node dist/cli.js assert traces/demo.jsonl \
   --forbid-command-prefix "rm -rf"
 ```
 
+JSON policies can also express behavior contracts: required tool order, required tool arguments, maximum tool duration, no failed tools, and successful session ending.
+
 ## SDK example
 
 ```ts

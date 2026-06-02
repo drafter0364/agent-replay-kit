@@ -1,12 +1,21 @@
 import { readTraceFile } from "./io.js";
-import type { TraceEvent } from "./types.js";
-import { isRecord } from "./utils.js";
+import type { JsonValue, TraceEvent } from "./types.js";
+import { isRecord, stableStringify } from "./utils.js";
+
+export interface RequiredToolArgs {
+  tool: string;
+  args: Record<string, JsonValue>;
+}
 
 export interface TraceAssertionConfig {
   mustCall?: string[];
   mustNotCall?: string[];
   maxToolCalls?: Record<string, number>;
   maxShellCalls?: number;
+  maxDurationMs?: number;
+  noFailedTools?: boolean;
+  mustEndOk?: boolean;
+  mustUseArgs?: RequiredToolArgs[];
   forbiddenCommands?: string[];
   forbiddenCommandPrefixes?: string[];
   forbiddenCommandPatterns?: string[];
@@ -26,6 +35,7 @@ export interface TraceAssertionReport {
 
 export function assertTrace(events: TraceEvent[], config: TraceAssertionConfig): TraceAssertionReport {
   const calls = events.filter((event) => event.type === "tool_call");
+  const results = events.filter((event) => event.type === "tool_result");
   const toolCounts = new Map<string, number>();
   const findings: TraceAssertionFinding[] = [];
 
@@ -68,6 +78,48 @@ export function assertTrace(events: TraceEvent[], config: TraceAssertionConfig):
       name: "max-shell-calls",
       ok,
       message: ok ? `Shell calls ${count}/${config.maxShellCalls}` : `Shell calls ${count}, max is ${config.maxShellCalls}`
+    });
+  }
+
+  if (typeof config.maxDurationMs === "number") {
+    const offenders = results.filter((result) => typeof result.durationMs === "number" && result.durationMs > config.maxDurationMs!);
+    findings.push({
+      name: "max-duration-ms",
+      ok: offenders.length === 0,
+      message:
+        offenders.length === 0
+          ? `No tool result exceeded ${config.maxDurationMs}ms`
+          : `${offenders.length} tool result(s) exceeded ${config.maxDurationMs}ms`
+    });
+  }
+
+  if (config.noFailedTools === true) {
+    const offenders = results.filter((result) => !result.ok);
+    findings.push({
+      name: "no-failed-tools",
+      ok: offenders.length === 0,
+      message: offenders.length === 0 ? "No failed tool results" : `${offenders.length} failed tool result(s)`
+    });
+  }
+
+  if (config.mustEndOk === true) {
+    const end = [...events].reverse().find((event) => event.type === "session_end");
+    const ok = end?.type === "session_end" && end.ok === true;
+    findings.push({
+      name: "must-end-ok",
+      ok,
+      message: ok ? "Trace ended with session_end.ok=true" : "Trace did not end with session_end.ok=true"
+    });
+  }
+
+  for (const requirement of config.mustUseArgs ?? []) {
+    const ok = calls.some((call) => call.tool === requirement.tool && argsInclude(call.args, requirement.args));
+    findings.push({
+      name: `must-use-args:${requirement.tool}`,
+      ok,
+      message: ok
+        ? `Tool ${requirement.tool} used required args ${stableStringify(requirement.args)}`
+        : `Tool ${requirement.tool} did not use required args ${stableStringify(requirement.args)}`
     });
   }
 
@@ -206,4 +258,18 @@ function getCommand(args: unknown): string | undefined {
   }
   const value = args.command ?? args.cmd ?? args.script;
   return typeof value === "string" ? value : undefined;
+}
+
+function argsInclude(actual: unknown, expected: Record<string, JsonValue>): boolean {
+  if (!isRecord(actual)) {
+    return false;
+  }
+
+  for (const [key, expectedValue] of Object.entries(expected)) {
+    if (stableStringify(actual[key]) !== stableStringify(expectedValue)) {
+      return false;
+    }
+  }
+
+  return true;
 }

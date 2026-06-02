@@ -2,6 +2,17 @@
   "mustCall": ["shell"],
   "mustNotCall": ["send_message"],
   "maxShellCalls": 2,
+  "maxDurationMs": 1000,
+  "noFailedTools": true,
+  "mustEndOk": true,
+  "mustUseArgs": [
+    {
+      "tool": "shell",
+      "args": {
+        "command": "npm test"
+      }
+    }
+  ],
   "forbiddenCommandPrefixes": ["rm -rf", "git reset --hard"],
   "requiredOrder": ["shell"]
 }

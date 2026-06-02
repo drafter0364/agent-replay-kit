@@ -7,14 +7,22 @@ describe("assertion policy", () => {
       parseAssertionPolicy({
         mustCall: ["read_file"],
         maxShellCalls: 2,
+        maxDurationMs: 100,
+        noFailedTools: true,
+        mustEndOk: true,
         maxToolCalls: { shell: 1 },
+        mustUseArgs: [{ tool: "shell", args: { command: "npm test" } }],
         forbiddenCommandPrefixes: ["rm -rf"],
         requiredOrder: ["read_file", "shell"]
       })
     ).toEqual({
       mustCall: ["read_file"],
       maxShellCalls: 2,
+      maxDurationMs: 100,
+      noFailedTools: true,
+      mustEndOk: true,
       maxToolCalls: { shell: 1 },
+      mustUseArgs: [{ tool: "shell", args: { command: "npm test" } }],
       forbiddenCommandPrefixes: ["rm -rf"],
       requiredOrder: ["read_file", "shell"]
     });
@@ -23,6 +31,7 @@ describe("assertion policy", () => {
   it("rejects invalid policy fields", () => {
     expect(() => parseAssertionPolicy({ maxShellCalls: -1 })).toThrow("maxShellCalls");
     expect(() => parseAssertionPolicy({ mustCall: [1] })).toThrow("mustCall");
+    expect(() => parseAssertionPolicy({ mustUseArgs: [{ tool: "shell", args: { bad: undefined } }] })).toThrow("mustUseArgs");
   });
 
   it("merges policy and CLI configs", () => {

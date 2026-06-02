@@ -5,7 +5,10 @@ import type { TraceEvent } from "../src/types.js";
 const events: TraceEvent[] = [
   { type: "tool_call", callId: "c1", tool: "read_file", args: { path: "README.md" } },
   { type: "tool_call", callId: "c2", tool: "shell", args: { command: "npm test" } },
-  { type: "tool_call", callId: "c3", tool: "shell", args: { command: "rm -rf dist" } }
+  { type: "tool_result", callId: "c2", tool: "shell", ok: true, result: { exitCode: 0 }, durationMs: 25 },
+  { type: "tool_call", callId: "c3", tool: "shell", args: { command: "rm -rf dist" } },
+  { type: "tool_result", callId: "c3", tool: "shell", ok: false, error: { message: "blocked" }, durationMs: 250 },
+  { type: "session_end", ok: false }
 ];
 
 describe("trace assertions", () => {
@@ -42,5 +45,19 @@ describe("trace assertions", () => {
   it("checks required tool order", () => {
     expect(assertTrace(events, { requiredOrder: ["read_file", "shell"] }).ok).toBe(true);
     expect(assertTrace(events, { requiredOrder: ["shell", "read_file"] }).ok).toBe(false);
+  });
+
+  it("checks required args and tool duration contracts", () => {
+    expect(assertTrace(events, { mustUseArgs: [{ tool: "shell", args: { command: "npm test" } }], maxDurationMs: 300 }).ok).toBe(
+      true
+    );
+    expect(assertTrace(events, { mustUseArgs: [{ tool: "shell", args: { command: "npm run build" } }] }).ok).toBe(false);
+    expect(assertTrace(events, { maxDurationMs: 100 }).ok).toBe(false);
+  });
+
+  it("checks failed tools and successful session ending contracts", () => {
+    expect(assertTrace(events, { noFailedTools: true }).ok).toBe(false);
+    expect(assertTrace(events, { mustEndOk: true }).ok).toBe(false);
+    expect(assertTrace([{ type: "session_end", ok: true }], { mustEndOk: true }).ok).toBe(true);
   });
 });
