@@ -42,9 +42,23 @@ describe("assertion policy", () => {
   });
 
   it("merges policy and CLI configs", () => {
-    expect(mergeAssertionConfigs({ mustCall: ["read_file"], maxShellCalls: 2 }, { mustCall: ["shell"] })).toEqual({
+    expect(
+      mergeAssertionConfigs(
+        {
+          mustCall: ["read_file"],
+          maxShellCalls: 2,
+          maxDurationMs: 100,
+          noFailedTools: true,
+          mustEndOk: true
+        },
+        { mustCall: ["shell"] }
+      )
+    ).toEqual({
       mustCall: ["read_file", "shell"],
-      maxShellCalls: 2
+      maxShellCalls: 2,
+      maxDurationMs: 100,
+      noFailedTools: true,
+      mustEndOk: true
     });
   });
 });

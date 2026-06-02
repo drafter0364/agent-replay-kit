@@ -112,6 +112,15 @@ export function mergeAssertionConfigs(base: TraceAssertionConfig, override: Trac
   if (base.maxShellCalls !== undefined) {
     merged.maxShellCalls = base.maxShellCalls;
   }
+  if (base.maxDurationMs !== undefined) {
+    merged.maxDurationMs = base.maxDurationMs;
+  }
+  if (base.noFailedTools !== undefined) {
+    merged.noFailedTools = base.noFailedTools;
+  }
+  if (base.mustEndOk !== undefined) {
+    merged.mustEndOk = base.mustEndOk;
+  }
   if (mustUseArgs.length > 0) {
     merged.mustUseArgs = mustUseArgs;
   }
