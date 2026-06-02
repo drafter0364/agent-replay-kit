@@ -36,6 +36,7 @@ describe("CLI", () => {
       const sanitizedPath = join(dir, "public.jsonl");
       await expect(runCli(["sanitize", tracePath, "--out", sanitizedPath, "--format", "json"], io)).resolves.toBe(0);
       expect((await readTraceFile(sanitizedPath)).length).toBe(4);
+      await expect(runCli(["bundle", tracePath, "--out", join(dir, "repro.zip"), "--format", "json"], io)).resolves.toBe(0);
       await expect(runCli(["assert", tracePath, "--must-call", "shell"], io)).resolves.toBe(0);
       expect(output.join("")).toContain("\"exitCode\": 0");
       expect(output.join("")).toContain("\"eventCount\": 4");
@@ -43,6 +44,7 @@ describe("CLI", () => {
       expect(output.join("")).toContain("\"findings\": 0");
       expect(output.join("")).toContain("\"serviceName\": \"agent-replay-kit\"");
       expect(output.join("")).toContain("\"redactionCount\"");
+      expect(output.join("")).toContain("\"manifest\"");
     });
   });
 

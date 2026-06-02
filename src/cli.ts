@@ -14,6 +14,7 @@ import { renderGoldenTraceRegressionMarkdown, testGoldenTraceRegressionFiles } f
 import { exportTraceFileToOtel } from "./otel.js";
 import { renderTraceIntegrityMarkdown, sealTraceFile, verifyTraceFileIntegrity } from "./integrity.js";
 import { analyzeTraceFile, renderTraceAnalysisMarkdown } from "./analyze.js";
+import { bundleTraceFile } from "./bundle.js";
 
 interface CliIo {
   stdout: (text: string) => void;
@@ -38,6 +39,7 @@ Commands:
   validate trace.jsonl [--format markdown|json]
   inspect trace.jsonl [--format markdown|json]
   analyze trace.jsonl [--format markdown|json] [--max-shell-calls n]
+  bundle trace.jsonl --out repro.zip [--policy policy.json] [--allow-url-host host] [--format text|json]
   export-otel trace.jsonl
   seal trace.jsonl --out sealed.jsonl
   verify-integrity trace.jsonl [--format markdown|json]
@@ -72,6 +74,8 @@ export async function runCli(argv: string[], io: CliIo = defaultIo): Promise<num
         return await runInspect(parsed, io);
       case "analyze":
         return await runAnalyze(parsed, io);
+      case "bundle":
+        return await runBundle(parsed, io);
       case "export-otel":
         return await runExportOtel(parsed, io);
       case "seal":
@@ -243,6 +247,22 @@ async function runAnalyze(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const report = await analyzeTraceFile(trace, { maxShellCalls: optionalNumberOption(parsed, "max-shell-calls") });
   io.stdout(format === "json" ? JSON.stringify(report, null, 2) + "\n" : renderTraceAnalysisMarkdown(report));
   return report.ok ? 0 : 1;
+}
+
+async function runBundle(parsed: ParsedArgs, io: CliIo): Promise<number> {
+  const trace = requiredPositional(parsed, 0, "trace file");
+  const out = requiredOption(parsed, "out");
+  const format = optionalOption(parsed, "format") ?? "text";
+  const manifest = await bundleTraceFile(trace, out, {
+    policyPath: optionalOption(parsed, "policy"),
+    allowedUrlHosts: optionList(parsed, "allow-url-host")
+  });
+  if (format === "json") {
+    io.stdout(JSON.stringify({ output: out, manifest }, null, 2) + "\n");
+  } else {
+    io.stdout(`Wrote repro bundle to ${out}\n`);
+  }
+  return 0;
 }
 
 async function runExportOtel(parsed: ParsedArgs, io: CliIo): Promise<number> {

@@ -79,6 +79,7 @@ export {
   type TraceAnalysisSeverity,
   type TraceAnalysisSummary
 } from "./analyze.js";
+export { bundleTraceFile, type TraceBundleManifest, type TraceBundleOptions } from "./bundle.js";
 export {
   sanitizeTraceEvents,
   sanitizeTraceEventsWithReport,

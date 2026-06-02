@@ -35,6 +35,14 @@ By default, URLs are redacted. Public documentation hosts can be explicitly pres
 agent-replay sanitize private.jsonl --out public.jsonl --allow-url-host github.com
 ```
 
+For issue reports, create a repro bundle instead of sharing raw traces:
+
+```bash
+agent-replay bundle private.jsonl --out repro.zip --policy agent-replay.policy.json
+```
+
+The bundle contains a sanitized trace, redaction report, environment fingerprint, manifest, and optional policy file. It does not include the original trace.
+
 ## Dangerous command assertions
 
 CI assertions can flag command patterns:
