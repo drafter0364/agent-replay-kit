@@ -105,7 +105,7 @@ agent-replay verify-integrity sealed.jsonl [--format markdown|json]
     policy: agent-replay.policy.json
 ```
 
-Supported modes are `validate`, `assert`, `validate-and-assert`, and `test`.
+Supported modes are `validate`, `assert`, `analyze`, `validate-and-assert`, and `test`.
 
 ## Trace format
 

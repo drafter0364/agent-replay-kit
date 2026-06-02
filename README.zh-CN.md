@@ -101,7 +101,7 @@ agent-replay verify-integrity sealed.jsonl [--format markdown|json]
     policy: agent-replay.policy.json
 ```
 
-支持的模式包括 `validate`、`assert`、`validate-and-assert` 和 `test`。
+支持的模式包括 `validate`、`assert`、`analyze`、`validate-and-assert` 和 `test`。
 
 ## 当前边界
 

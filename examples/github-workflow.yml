@@ -18,3 +18,8 @@ jobs:
           mode: validate-and-assert
           trace: examples/traces/sample.jsonl
           policy: examples/agent-replay.policy.json
+      - uses: drafter0364/agent-replay-kit@main
+        with:
+          mode: analyze
+          trace: examples/traces/sample.jsonl
+          max-shell-calls: 3

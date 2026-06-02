@@ -3,7 +3,7 @@ description: Validate and assert Agent Replay Kit traces in GitHub Actions.
 
 inputs:
   mode:
-    description: validate, assert, test, or validate-and-assert.
+    description: validate, assert, analyze, test, or validate-and-assert.
     required: false
     default: validate-and-assert
   trace:
@@ -22,6 +22,9 @@ inputs:
     description: Output format, markdown or json.
     required: false
     default: markdown
+  max-shell-calls:
+    description: Optional max shell-call threshold for analyze mode.
+    required: false
 
 runs:
   using: composite
@@ -51,6 +54,7 @@ runs:
         AGENT_REPLAY_BASELINE: ${{ inputs.baseline }}
         AGENT_REPLAY_ACTUAL: ${{ inputs.actual }}
         AGENT_REPLAY_FORMAT: ${{ inputs.format }}
+        AGENT_REPLAY_MAX_SHELL_CALLS: ${{ inputs.max-shell-calls }}
         AGENT_REPLAY_CLI: ${{ github.action_path }}/dist/cli.js
       run: |
         set -euo pipefail
@@ -60,12 +64,20 @@ runs:
           policy_args=(--policy "${AGENT_REPLAY_POLICY}")
         fi
 
+        analyze_args=()
+        if [[ -n "${AGENT_REPLAY_MAX_SHELL_CALLS}" ]]; then
+          analyze_args=(--max-shell-calls "${AGENT_REPLAY_MAX_SHELL_CALLS}")
+        fi
+
         case "${AGENT_REPLAY_MODE}" in
           validate)
             node "${AGENT_REPLAY_CLI}" validate "${AGENT_REPLAY_TRACE}" --format "${AGENT_REPLAY_FORMAT}"
             ;;
           assert)
             node "${AGENT_REPLAY_CLI}" assert "${AGENT_REPLAY_TRACE}" "${policy_args[@]}" --format "${AGENT_REPLAY_FORMAT}"
+            ;;
+          analyze)
+            node "${AGENT_REPLAY_CLI}" analyze "${AGENT_REPLAY_TRACE}" "${analyze_args[@]}" --format "${AGENT_REPLAY_FORMAT}"
             ;;
           validate-and-assert)
             node "${AGENT_REPLAY_CLI}" validate "${AGENT_REPLAY_TRACE}" --format "${AGENT_REPLAY_FORMAT}"
