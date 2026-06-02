@@ -23,6 +23,12 @@ agent-replay sanitize private.jsonl --out public.jsonl
 agent-replay inspect public.jsonl
 ```
 
+The sanitize command reports how many redactions were applied. Use JSON output when you need a machine-readable redaction audit:
+
+```bash
+agent-replay sanitize private.jsonl --out public.jsonl --format json
+```
+
 ## Dangerous command assertions
 
 CI assertions can flag command patterns:

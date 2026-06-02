@@ -45,7 +45,16 @@ export {
   type ReplayOptions
 } from "./replay.js";
 export { diffTraceFiles, diffTraces, renderTraceDiffMarkdown, type TraceChange, type TraceDiff } from "./diff.js";
-export { sanitizeTraceEvents, sanitizeTraceFile, type SanitizerOptions, type SanitizerRule } from "./sanitize.js";
+export {
+  sanitizeTraceEvents,
+  sanitizeTraceEventsWithReport,
+  sanitizeTraceFile,
+  type SanitizedTrace,
+  type SanitizerOptions,
+  type SanitizerRedaction,
+  type SanitizerReport,
+  type SanitizerRule
+} from "./sanitize.js";
 export {
   assertTrace,
   assertTraceFile,

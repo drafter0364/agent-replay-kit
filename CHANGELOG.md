@@ -7,3 +7,4 @@
 - Added CLI commands for record, replay, diff, sanitize, assert, and inspect.
 - Added sanitizer, assertion engine, trace summary, examples, and documentation.
 - Added trace validation hardening and a `validate` CLI command.
+- Added sanitizer validation and redaction reports.

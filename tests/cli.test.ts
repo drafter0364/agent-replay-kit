@@ -30,11 +30,12 @@ describe("CLI", () => {
       await expect(runCli(["validate", tracePath, "--format", "json"], io)).resolves.toBe(0);
       await expect(runCli(["replay", tracePath, "--tool", "shell", "--args-json", "{\"command\":\"npm test\"}"], io)).resolves.toBe(0);
       const sanitizedPath = join(dir, "public.jsonl");
-      await expect(runCli(["sanitize", tracePath, "--out", sanitizedPath], io)).resolves.toBe(0);
+      await expect(runCli(["sanitize", tracePath, "--out", sanitizedPath, "--format", "json"], io)).resolves.toBe(0);
       expect((await readTraceFile(sanitizedPath)).length).toBe(4);
       await expect(runCli(["assert", tracePath, "--must-call", "shell"], io)).resolves.toBe(0);
       expect(output.join("")).toContain("\"exitCode\": 0");
       expect(output.join("")).toContain("\"eventCount\": 4");
+      expect(output.join("")).toContain("\"redactionCount\"");
     });
   });
 

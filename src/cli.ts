@@ -27,7 +27,7 @@ Commands:
   record --out trace.jsonl --tool name [--args-json '{}'] [--result-json '{}']
   replay trace.jsonl [--tool name --args-json '{}']
   diff old.jsonl new.jsonl [--format markdown|json]
-  sanitize trace.jsonl --out public.jsonl
+  sanitize trace.jsonl --out public.jsonl [--format text|json]
   assert trace.jsonl [--must-call tool] [--must-not-call tool] [--max-shell-calls n]
   validate trace.jsonl [--format markdown|json]
   inspect trace.jsonl [--format markdown|json]
@@ -145,8 +145,13 @@ async function runDiff(parsed: ParsedArgs, io: CliIo): Promise<number> {
 async function runSanitize(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const trace = requiredPositional(parsed, 0, "trace file");
   const out = requiredOption(parsed, "out");
-  await sanitizeTraceFile(trace, out);
-  io.stdout(`Wrote sanitized trace to ${out}\n`);
+  const format = optionalOption(parsed, "format") ?? "text";
+  const report = await sanitizeTraceFile(trace, out);
+  if (format === "json") {
+    io.stdout(JSON.stringify({ output: out, ...report }, null, 2) + "\n");
+  } else {
+    io.stdout(`Wrote sanitized trace to ${out} (${report.redactionCount} redactions)\n`);
+  }
   return 0;
 }
 
