@@ -9,7 +9,7 @@
 
 ## 0.2.x
 
-- Add an OpenAI Agents SDK adapter.
+- Expand the OpenAI Agents SDK adapter example into a dedicated integration package if usage justifies it.
 - Add a LangChain adapter.
 - Add MCP client/server trace examples.
 - Add OpenTelemetry export.

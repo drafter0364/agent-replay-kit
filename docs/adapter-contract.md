@@ -91,6 +91,7 @@ await recorder.end({ ok: true });
 ```
 
 See `examples/mcp-tool-wrapper.mjs` for a runnable MCP-style tool adapter example that does not require an MCP SDK dependency.
+See `examples/openai-agents-tool-wrapper.mjs` for an OpenAI Agents SDK function-tool wrapper example. It intentionally keeps `@openai/agents` outside the core package dependencies.
 
 ## Error mapping
 

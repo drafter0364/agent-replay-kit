@@ -131,7 +131,7 @@ Good first contributions:
 - Trace adapters for specific agent runtimes.
 - Example traces from real open-source maintenance workflows.
 
-See `examples/mcp-tool-wrapper.mjs` for a framework-neutral MCP-style adapter example.
+See `examples/mcp-tool-wrapper.mjs` for a framework-neutral MCP-style adapter example, and `examples/openai-agents-tool-wrapper.mjs` for an optional OpenAI Agents SDK tool wrapper.
 
 ## Development
 
