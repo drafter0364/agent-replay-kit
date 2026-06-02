@@ -63,4 +63,5 @@ export {
   type TraceAssertionFinding,
   type TraceAssertionReport
 } from "./assert.js";
+export { mergeAssertionConfigs, parseAssertionPolicy, readAssertionPolicyFile } from "./policy.js";
 export { renderTraceSummaryMarkdown, summarizeTrace, summarizeTraceFile, type TraceSummary } from "./inspect.js";

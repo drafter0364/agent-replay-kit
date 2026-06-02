@@ -9,6 +9,7 @@ import { sanitizeTraceFile } from "./sanitize.js";
 import { renderTraceSummaryMarkdown, summarizeTraceFile } from "./inspect.js";
 import type { JsonValue } from "./types.js";
 import { renderTraceValidationMarkdown, validateTraceFile } from "./validation.js";
+import { mergeAssertionConfigs, readAssertionPolicyFile } from "./policy.js";
 
 interface CliIo {
   stdout: (text: string) => void;
@@ -28,7 +29,7 @@ Commands:
   replay trace.jsonl [--tool name --args-json '{}']
   diff old.jsonl new.jsonl [--format markdown|json]
   sanitize trace.jsonl --out public.jsonl [--format text|json]
-  assert trace.jsonl [--must-call tool] [--must-not-call tool] [--max-shell-calls n]
+  assert trace.jsonl [--policy policy.json] [--must-call tool] [--must-not-call tool] [--max-shell-calls n]
   validate trace.jsonl [--format markdown|json]
   inspect trace.jsonl [--format markdown|json]
 `;
@@ -158,12 +159,17 @@ async function runSanitize(parsed: ParsedArgs, io: CliIo): Promise<number> {
 async function runAssert(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const trace = requiredPositional(parsed, 0, "trace file");
   const format = optionalOption(parsed, "format") ?? "markdown";
-  const config: TraceAssertionConfig = {
+  const flagConfig: TraceAssertionConfig = {
     mustCall: optionList(parsed, "must-call"),
     mustNotCall: optionList(parsed, "must-not-call"),
     maxShellCalls: optionalNumberOption(parsed, "max-shell-calls"),
+    forbiddenCommands: optionList(parsed, "forbid-command"),
+    forbiddenCommandPrefixes: optionList(parsed, "forbid-command-prefix"),
     forbiddenCommandPatterns: optionList(parsed, "forbid-command-pattern")
   };
+  const policyPath = optionalOption(parsed, "policy");
+  const policyConfig = policyPath ? await readAssertionPolicyFile(policyPath) : {};
+  const config = mergeAssertionConfigs(policyConfig, flagConfig);
   const report = await assertTraceFile(trace, config);
   io.stdout(format === "json" ? JSON.stringify(report, null, 2) + "\n" : renderAssertionMarkdown(report));
   return report.ok ? 0 : 1;

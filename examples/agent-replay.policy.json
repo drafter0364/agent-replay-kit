@@ -1,0 +1,7 @@
+{
+  "mustCall": ["shell"],
+  "mustNotCall": ["send_message"],
+  "maxShellCalls": 2,
+  "forbiddenCommandPrefixes": ["rm -rf", "git reset --hard"],
+  "requiredOrder": ["shell"]
+}

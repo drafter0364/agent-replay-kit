@@ -51,7 +51,7 @@ Add CI assertions:
 node dist/cli.js assert traces/demo.jsonl \
   --must-call shell \
   --max-shell-calls 3 \
-  --forbid-command-pattern "rm -rf"
+  --forbid-command-prefix "rm -rf"
 ```
 
 ## SDK example
@@ -82,7 +82,7 @@ agent-replay record --out trace.jsonl --tool name [--args-json '{}'] [--result-j
 agent-replay replay trace.jsonl [--tool name --args-json '{}']
 agent-replay diff old.jsonl new.jsonl [--format markdown|json]
 agent-replay sanitize trace.jsonl --out public.jsonl [--format text|json]
-agent-replay assert trace.jsonl [--must-call tool] [--must-not-call tool] [--max-shell-calls n]
+agent-replay assert trace.jsonl [--policy policy.json] [--must-call tool] [--must-not-call tool] [--max-shell-calls n]
 agent-replay validate trace.jsonl [--format markdown|json]
 agent-replay inspect trace.jsonl [--format markdown|json]
 ```

@@ -34,7 +34,9 @@ agent-replay sanitize private.jsonl --out public.jsonl --format json
 CI assertions can flag command patterns:
 
 ```bash
-agent-replay assert trace.jsonl --forbid-command-pattern "rm -rf"
+agent-replay assert trace.jsonl --forbid-command-prefix "rm -rf"
 ```
 
 This is a policy check over recorded arguments. It is not a sandbox.
+
+Prefer literal or prefix checks for common dangerous commands. Regex patterns are supported for local policy files, but Agent Replay Kit rejects invalid patterns, patterns longer than 200 characters, and simple nested-quantifier shapes that commonly cause catastrophic backtracking.

@@ -21,4 +21,26 @@ describe("trace assertions", () => {
     expect(report.ok).toBe(false);
     expect(renderAssertionMarkdown(report)).toContain("FAIL");
   });
+
+  it("supports literal and prefix forbidden command assertions", () => {
+    const report = assertTrace(events, { forbiddenCommands: ["npm test"], forbiddenCommandPrefixes: ["rm -"] });
+
+    expect(report.ok).toBe(false);
+    expect(report.findings.map((finding) => finding.name)).toEqual(
+      expect.arrayContaining(["forbidden-command:npm test", "forbidden-command-prefix:rm -"])
+    );
+  });
+
+  it("reports invalid and suspicious regex patterns as findings", () => {
+    const report = assertTrace(events, { forbiddenCommandPatterns: ["[", "(a+)+$"] });
+
+    expect(report.ok).toBe(false);
+    expect(report.findings.map((finding) => finding.message).join("\n")).toContain("Invalid forbidden command pattern");
+    expect(report.findings.map((finding) => finding.message).join("\n")).toContain("catastrophic backtracking");
+  });
+
+  it("checks required tool order", () => {
+    expect(assertTrace(events, { requiredOrder: ["read_file", "shell"] }).ok).toBe(true);
+    expect(assertTrace(events, { requiredOrder: ["shell", "read_file"] }).ok).toBe(false);
+  });
 });

@@ -53,6 +53,21 @@ describe("CLI", () => {
     });
   });
 
+  it("loads assertion policy files", async () => {
+    await withTempDir(async (dir) => {
+      const tracePath = join(dir, "trace.jsonl");
+      const policyPath = join(dir, "policy.json");
+      const io = { stdout: (_text: string) => undefined, stderr: (_text: string) => undefined };
+
+      await runCli(["record", "--out", tracePath, "--tool", "shell", "--args-json", "{\"command\":\"npm test\"}"], io);
+      await import("node:fs/promises").then(({ writeFile }) =>
+        writeFile(policyPath, JSON.stringify({ mustCall: ["shell"], forbiddenCommandPrefixes: ["rm -rf"] }), "utf8")
+      );
+
+      await expect(runCli(["assert", tracePath, "--policy", policyPath], io)).resolves.toBe(0);
+    });
+  });
+
   it("reports validation failures from the CLI", async () => {
     await withTempDir(async (dir) => {
       const tracePath = join(dir, "invalid.jsonl");

@@ -10,6 +10,12 @@ agent-replay assert examples/traces/sample.jsonl \
   --forbid-command-pattern "rm -rf"
 ```
 
+The same policy can be stored in JSON:
+
+```bash
+agent-replay assert examples/traces/sample.jsonl --policy examples/agent-replay.policy.json
+```
+
 Suggested GitHub Actions step:
 
 ```yaml
@@ -18,7 +24,5 @@ Suggested GitHub Actions step:
     npm ci
     npm run build
     node dist/cli.js assert examples/traces/sample.jsonl \
-      --must-call shell \
-      --max-shell-calls 2 \
-      --forbid-command-pattern "rm -rf"
+      --policy examples/agent-replay.policy.json
 ```
