@@ -22,6 +22,26 @@ describe("TraceReplayer", () => {
     expect(() => replayer.replayTool("shell", { command: "npm run build" })).toThrow(ReplayMismatchError);
   });
 
+  it("attaches structured details to replay mismatches", () => {
+    const replayer = new TraceReplayer(events);
+
+    let caught: unknown;
+    try {
+      replayer.replayTool("shell", { command: "npm run build" });
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toBeInstanceOf(ReplayMismatchError);
+    expect((caught as ReplayMismatchError).details).toMatchObject({
+      expectedTool: "shell",
+      actualTool: "shell",
+      expectedArgs: { command: "npm test" },
+      actualArgs: { command: "npm run build" },
+      callId: "c1"
+    });
+  });
+
   it("can replay by tool name only when requested", () => {
     const replayer = new TraceReplayer(events, { matchMode: "tool-only" });
 
@@ -79,6 +99,20 @@ describe("TraceReplayer", () => {
     ];
 
     expect(() => new TraceReplayer(invalidEvents)).toThrow(/has no matching tool_call/);
+  });
+
+  it("attaches callId details when replaying by missing call id", () => {
+    const replayer = new TraceReplayer(events, { matchMode: "call-id" });
+
+    let caught: unknown;
+    try {
+      replayer.replayToolByCallId("missing");
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toBeInstanceOf(ReplayMismatchError);
+    expect((caught as ReplayMismatchError).details).toMatchObject({ callId: "missing" });
   });
 
   it("rejects duplicate or inconsistent tool interactions during replay setup", () => {
