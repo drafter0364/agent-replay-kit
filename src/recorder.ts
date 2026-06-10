@@ -25,6 +25,8 @@ export interface SessionEndOptions {
   metadata?: JsonObject;
 }
 
+type RecorderWriteEvent<T extends TraceEvent> = Omit<T, "seq" | "timestamp">;
+
 export class TraceRecorder {
   private seq = 0;
   private startedAt = Date.now();
@@ -136,7 +138,7 @@ export class TraceRecorder {
     return event;
   }
 
-  private async write<T extends TraceEvent>(event: Omit<T, "seq" | "timestamp"> & Partial<Pick<T, "seq" | "timestamp">>): Promise<T> {
+  private async write<T extends TraceEvent>(event: RecorderWriteEvent<T>): Promise<T> {
     const nextSeq = this.seq + 1;
     const fullEvent = normalizeEvent({
       ...event,
