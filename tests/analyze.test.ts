@@ -61,6 +61,40 @@ describe("trace analysis", () => {
     expect(report.findings.map((finding) => finding.rule)).toContain("external-action-before-verification");
   });
 
+  it("flags retry storms for consecutive identical tool calls", () => {
+    const events: TraceEvent[] = [
+      { type: "session_start", schemaVersion: "1.0", sessionId: "s1" },
+      { type: "tool_call", callId: "c1", tool: "http_get", args: { url: "https://example.test" } },
+      { type: "tool_result", callId: "c1", tool: "http_get", ok: false, error: { message: "timeout" } },
+      { type: "tool_call", callId: "c2", tool: "http_get", args: { url: "https://example.test" } },
+      { type: "tool_result", callId: "c2", tool: "http_get", ok: false, error: { message: "timeout" } },
+      { type: "tool_call", callId: "c3", tool: "http_get", args: { url: "https://example.test" } },
+      { type: "tool_result", callId: "c3", tool: "http_get", ok: false, error: { message: "timeout" } },
+      { type: "session_end", ok: false }
+    ];
+
+    const report = analyzeTrace(events);
+
+    expect(report.findings.map((finding) => finding.rule)).toContain("retry-storm");
+  });
+
+  it("does not flag retry storms when identical calls are interrupted", () => {
+    const events: TraceEvent[] = [
+      { type: "session_start", schemaVersion: "1.0", sessionId: "s1" },
+      { type: "tool_call", callId: "c1", tool: "http_get", args: { url: "https://example.test" } },
+      { type: "tool_result", callId: "c1", tool: "http_get", ok: false, error: { message: "timeout" } },
+      { type: "tool_call", callId: "c2", tool: "read_file", args: { path: "README.md" }, metadata: { sideEffect: "read" } },
+      { type: "tool_result", callId: "c2", tool: "read_file", ok: true },
+      { type: "tool_call", callId: "c3", tool: "http_get", args: { url: "https://example.test" } },
+      { type: "tool_result", callId: "c3", tool: "http_get", ok: false, error: { message: "timeout" } },
+      { type: "session_end", ok: false }
+    ];
+
+    const report = analyzeTrace(events);
+
+    expect(report.findings.map((finding) => finding.rule)).not.toContain("retry-storm");
+  });
+
   it("does not flag external actions after a verification read", () => {
     const events: TraceEvent[] = [
       { type: "session_start", schemaVersion: "1.0", sessionId: "s1" },

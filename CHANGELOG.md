@@ -41,3 +41,4 @@
 - Schema validation now rejects overly deep or oversized JSON payloads.
 - GitHub Action wrapper now supports passing CLI config files through `config-file`.
 - Validation reports now include skipped blank-line counts.
+- Analyze now warns about consecutive identical tool-call retry storms.

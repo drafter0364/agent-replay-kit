@@ -37,6 +37,7 @@ export function analyzeTrace(events: TraceEvent[], options: AnalyzeTraceOptions 
     .filter((item): item is { event: ToolCallEvent; index: number } => item !== undefined);
   const findings: TraceAnalysisFinding[] = [
     ...findRepeatedToolCalls(indexedCalls),
+    ...findRetryStorms(indexedCalls),
     ...findExcessiveShellCalls(indexedCalls, maxShellCalls),
     ...findWriteBeforeRead(indexedCalls),
     ...findExternalActionBeforeVerification(indexedCalls),
@@ -98,6 +99,31 @@ function findRepeatedToolCalls(indexedCalls: Array<{ event: ToolCallEvent; index
       eventIndexes: group.map((item) => item.index),
       callIds: group.map((item) => item.event.callId)
     }));
+}
+
+function findRetryStorms(indexedCalls: Array<{ event: ToolCallEvent; index: number }>): TraceAnalysisFinding[] {
+  const findings: TraceAnalysisFinding[] = [];
+  let streak: Array<{ event: ToolCallEvent; index: number }> = [];
+  let previousKey: string | undefined;
+
+  for (const item of indexedCalls) {
+    const key = `${item.event.tool}\0${stableStringify(item.event.args)}`;
+    if (key === previousKey) {
+      streak.push(item);
+    } else {
+      if (streak.length >= 3) {
+        findings.push(buildRetryStormFinding(streak));
+      }
+      streak = [item];
+      previousKey = key;
+    }
+  }
+
+  if (streak.length >= 3) {
+    findings.push(buildRetryStormFinding(streak));
+  }
+
+  return findings;
 }
 
 function findExcessiveShellCalls(
@@ -201,4 +227,14 @@ function isShellTool(tool: string): boolean {
 function getSideEffect(call: ToolCallEvent): string | undefined {
   const sideEffect = call.metadata?.sideEffect;
   return typeof sideEffect === "string" ? sideEffect : undefined;
+}
+
+function buildRetryStormFinding(streak: Array<{ event: ToolCallEvent; index: number }>): TraceAnalysisFinding {
+  return {
+    rule: "retry-storm",
+    severity: "warning",
+    message: `Tool ${streak[0]!.event.tool} was retried ${streak.length} times in a row with identical arguments`,
+    eventIndexes: streak.map((item) => item.index),
+    callIds: streak.map((item) => item.event.callId)
+  };
 }
