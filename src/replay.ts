@@ -42,7 +42,7 @@ export class TraceReplayer {
     this.byCallId = new Map(this.interactions.map((interaction) => [interaction.call.callId, interaction]));
   }
 
-  replayTool<T = JsonValue>(tool: string, args: JsonValue): T {
+  replayTool(tool: string, args: JsonValue): JsonValue {
     const matchMode = this.options.matchMode ?? "strict";
     if (matchMode === "call-id") {
       throw new ReplayMismatchError("replayTool() cannot be used with call-id match mode; use replayToolByCallId()");
@@ -80,10 +80,16 @@ export class TraceReplayer {
       throw new RecordedToolError(interaction.result);
     }
 
-    return interaction.result.result as T;
+    if (interaction.result.result === undefined) {
+      throw new ReplayMismatchError(`Recorded tool call ${interaction.call.callId} has no result payload`, {
+        expectedTool: interaction.call.tool,
+        callId: interaction.call.callId
+      });
+    }
+    return interaction.result.result;
   }
 
-  replayToolByCallId<T = JsonValue>(callId: string, expected?: { tool?: string; args?: JsonValue }): T {
+  replayToolByCallId(callId: string, expected?: { tool?: string; args?: JsonValue }): JsonValue {
     const interaction = this.byCallId.get(callId);
     if (!interaction) {
       throw new ReplayMismatchError(`No recorded tool call found for callId ${callId}`, { callId });
@@ -120,7 +126,14 @@ export class TraceReplayer {
       throw new RecordedToolError(interaction.result);
     }
 
-    return interaction.result.result as T;
+    if (interaction.result.result === undefined) {
+      throw new ReplayMismatchError(`Recorded tool call ${interaction.call.callId} has no result payload`, {
+        expectedTool: interaction.call.tool,
+        actualTool: expected?.tool ?? interaction.call.tool,
+        callId
+      });
+    }
+    return interaction.result.result;
   }
 
   remaining(): RecordedToolInteraction[] {
