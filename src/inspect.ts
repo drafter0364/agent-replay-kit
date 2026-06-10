@@ -1,5 +1,5 @@
 import { readTraceFile } from "./io.js";
-import type { TraceEvent } from "./types.js";
+import type { SessionEndEvent, SessionStartEvent, TraceEvent } from "./types.js";
 import { isRecord } from "./utils.js";
 
 export interface TraceSummary {
@@ -41,7 +41,7 @@ export interface TraceTimeline {
 }
 
 export function summarizeTrace(events: TraceEvent[]): TraceSummary {
-  const firstSession = events.find((event) => event.type === "session_start");
+  const firstSession = events.find(isSessionStartEvent);
   const toolCalls: Record<string, number> = {};
   let failedTools = 0;
   let passedAssertions = 0;
@@ -66,7 +66,7 @@ export function summarizeTrace(events: TraceEvent[]): TraceSummary {
   return {
     eventCount: events.length,
     sessionId: firstSession?.sessionId,
-    agent: firstSession?.type === "session_start" ? firstSession.agent : undefined,
+    agent: firstSession?.agent,
     toolCalls,
     failedTools,
     assertions: {
@@ -81,8 +81,8 @@ export async function summarizeTraceFile(filePath: string): Promise<TraceSummary
 }
 
 export function buildTraceTimeline(events: TraceEvent[]): TraceTimeline {
-  const firstSession = events.find((event) => event.type === "session_start");
-  const sessionEnd = [...events].reverse().find((event) => event.type === "session_end");
+  const firstSession = events.find(isSessionStartEvent);
+  const sessionEnd = [...events].reverse().find(isSessionEndEvent);
   const items = events.map((event, index): TraceTimelineItem => {
     const base = {
       index,
@@ -116,8 +116,8 @@ export function buildTraceTimeline(events: TraceEvent[]): TraceTimeline {
 
   return {
     sessionId: firstSession?.sessionId,
-    agent: firstSession?.type === "session_start" ? firstSession.agent : undefined,
-    durationMs: sessionEnd?.type === "session_end" ? sessionEnd.durationMs : undefined,
+    agent: firstSession?.agent,
+    durationMs: sessionEnd?.durationMs,
     items,
     slowestTools: [...toolResults]
       .filter((item) => typeof item.durationMs === "number")
@@ -165,4 +165,12 @@ function getSideEffect(metadata: unknown): string | undefined {
     return undefined;
   }
   return typeof metadata.sideEffect === "string" ? metadata.sideEffect : undefined;
+}
+
+function isSessionStartEvent(event: TraceEvent): event is SessionStartEvent {
+  return event.type === "session_start";
+}
+
+function isSessionEndEvent(event: TraceEvent): event is SessionEndEvent {
+  return event.type === "session_end";
 }
