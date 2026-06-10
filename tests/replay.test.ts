@@ -71,4 +71,33 @@ describe("TraceReplayer", () => {
 
     expect(() => replayer.replayTool("shell", { command: "npm test" })).toThrow(ReplayMismatchError);
   });
+
+  it("rejects orphan tool results during replay setup", () => {
+    const invalidEvents: TraceEvent[] = [
+      { type: "session_start", schemaVersion: "1.0", sessionId: "s1" },
+      { type: "tool_result", callId: "missing", tool: "shell", ok: true, result: { exitCode: 0 } }
+    ];
+
+    expect(() => new TraceReplayer(invalidEvents)).toThrow(/has no matching tool_call/);
+  });
+
+  it("rejects duplicate or inconsistent tool interactions during replay setup", () => {
+    const duplicateCallEvents: TraceEvent[] = [
+      { type: "tool_call", callId: "c1", tool: "shell", args: {} },
+      { type: "tool_call", callId: "c1", tool: "shell", args: {} }
+    ];
+    const mismatchedResultEvents: TraceEvent[] = [
+      { type: "tool_call", callId: "c1", tool: "shell", args: {} },
+      { type: "tool_result", callId: "c1", tool: "http", ok: true, result: {} }
+    ];
+    const duplicateResultEvents: TraceEvent[] = [
+      { type: "tool_call", callId: "c1", tool: "shell", args: {} },
+      { type: "tool_result", callId: "c1", tool: "shell", ok: true, result: {} },
+      { type: "tool_result", callId: "c1", tool: "shell", ok: true, result: {} }
+    ];
+
+    expect(() => new TraceReplayer(duplicateCallEvents)).toThrow(/duplicate tool_call/);
+    expect(() => new TraceReplayer(mismatchedResultEvents)).toThrow(/does not match tool_call tool/);
+    expect(() => new TraceReplayer(duplicateResultEvents)).toThrow(/duplicate tool_result/);
+  });
 });

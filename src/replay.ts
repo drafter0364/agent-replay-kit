@@ -117,6 +117,9 @@ export function collectToolInteractions(events: TraceEvent[]): RecordedToolInter
 
   for (const event of events) {
     if (event.type === "tool_call") {
+      if (byCallId.has(event.callId)) {
+        throw new ReplayMismatchError(`Invalid trace: duplicate tool_call callId ${event.callId}`);
+      }
       const interaction = { call: event };
       interactions.push(interaction);
       byCallId.set(event.callId, interaction);
@@ -124,9 +127,18 @@ export function collectToolInteractions(events: TraceEvent[]): RecordedToolInter
 
     if (event.type === "tool_result") {
       const interaction = byCallId.get(event.callId);
-      if (interaction) {
-        interaction.result = event;
+      if (!interaction) {
+        throw new ReplayMismatchError(`Invalid trace: tool_result ${event.callId} has no matching tool_call`);
       }
+      if (interaction.call.tool !== event.tool) {
+        throw new ReplayMismatchError(
+          `Invalid trace: tool_result ${event.callId} tool ${event.tool} does not match tool_call tool ${interaction.call.tool}`
+        );
+      }
+      if (interaction.result) {
+        throw new ReplayMismatchError(`Invalid trace: duplicate tool_result callId ${event.callId}`);
+      }
+      interaction.result = event;
     }
   }
 

@@ -32,3 +32,4 @@
 - Expanded sanitizer sensitive-key matching for private keys, auth fields, passphrases, and connection strings.
 - Expanded sanitizer Unix path coverage for `/etc`, `/opt`, `/root`, and `~/.ssh`.
 - Documented the shell-tool name heuristic used by `maxShellCalls`.
+- Replayer now rejects orphan, duplicate, and mismatched tool interaction events during setup.
