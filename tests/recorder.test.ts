@@ -88,4 +88,18 @@ describe("TraceRecorder", () => {
       expect(events[2]).toMatchObject({ type: "tool_result", callId: "mcp_call_1" });
     });
   });
+
+  it("rejects invalid recorder options at construction time", async () => {
+    await withTempDir(async (dir) => {
+      const tracePath = join(dir, "trace.jsonl");
+
+      expect(() => createRecorder(tracePath, { sessionId: "" })).toThrow("RecorderOptions.sessionId must be a non-empty string");
+      expect(() => createRecorder(tracePath, { agent: 123 as never })).toThrow("RecorderOptions.agent must be a string");
+      expect(() => createRecorder(tracePath, { runId: 123 as never })).toThrow("RecorderOptions.runId must be a string");
+      expect(() => createRecorder(tracePath, { metadata: [] as never })).toThrow("RecorderOptions.metadata must be a JSON object");
+      expect(() => createRecorder(tracePath, { metadata: { invalid: undefined } as never })).toThrow(
+        "RecorderOptions.metadata must be a JSON object"
+      );
+    });
+  });
 });

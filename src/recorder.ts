@@ -9,7 +9,7 @@ import type {
   ToolResultEvent,
   TraceEvent
 } from "./types.js";
-import { createId, nowIso, toJsonValue } from "./utils.js";
+import { createId, isJsonValue, isRecord, nowIso, toJsonValue } from "./utils.js";
 
 export interface RecorderOptions {
   sessionId?: string;
@@ -34,6 +34,7 @@ export class TraceRecorder {
     readonly filePath: string,
     private readonly options: RecorderOptions = {}
   ) {
+    validateRecorderOptions(options);
     this.sessionId = options.sessionId ?? createId("session");
   }
 
@@ -158,6 +159,23 @@ export class TraceRecorder {
 
 export function createRecorder(filePath: string, options?: RecorderOptions): TraceRecorder {
   return new TraceRecorder(filePath, options);
+}
+
+function validateRecorderOptions(options: RecorderOptions): void {
+  if ("sessionId" in options && (typeof options.sessionId !== "string" || options.sessionId.length === 0)) {
+    throw new Error("RecorderOptions.sessionId must be a non-empty string");
+  }
+  if ("agent" in options && options.agent !== undefined && typeof options.agent !== "string") {
+    throw new Error("RecorderOptions.agent must be a string");
+  }
+  if ("runId" in options && options.runId !== undefined && typeof options.runId !== "string") {
+    throw new Error("RecorderOptions.runId must be a string");
+  }
+  if ("metadata" in options && options.metadata !== undefined) {
+    if (!isRecord(options.metadata) || !isJsonValue(options.metadata)) {
+      throw new Error("RecorderOptions.metadata must be a JSON object");
+    }
+  }
 }
 
 function serializeError(error: unknown): { name?: string; message: string; stack?: string } {
