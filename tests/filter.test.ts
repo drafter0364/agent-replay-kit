@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { filterTrace, filterTraceFile, writeTraceFile } from "../src/index.js";
+import { filterTrace, filterTraceFile, readTraceFile, writeTraceFile } from "../src/index.js";
 import type { TraceEvent } from "../src/types.js";
 import { withTempDir } from "./helpers.js";
 
@@ -72,6 +72,39 @@ describe("trace filter", () => {
         outputEventCount: 4,
         matchedInteractionCount: 1
       });
+    });
+  });
+
+  it("preserves order for interleaved calls and late results", async () => {
+    await withTempDir(async (dir) => {
+      const inputPath = join(dir, "trace.jsonl");
+      const outputPath = join(dir, "filtered.jsonl");
+      const interleavedEvents: TraceEvent[] = [
+        { type: "session_start", schemaVersion: "1.0", sessionId: "s1" },
+        { type: "tool_call", callId: "c1", tool: "shell", args: { command: "npm test" } },
+        { type: "tool_call", callId: "c2", tool: "read_file", args: { path: "README.md" } },
+        { type: "tool_result", callId: "c1", tool: "shell", ok: true, result: { exitCode: 0 } },
+        { type: "tool_result", callId: "c2", tool: "read_file", ok: true, result: "ok" },
+        { type: "session_end", ok: true }
+      ];
+      await writeTraceFile(inputPath, interleavedEvents);
+
+      const report = await filterTraceFile(inputPath, outputPath, { tools: ["shell", "read_file"] });
+      const filtered = await readTraceFile(outputPath);
+
+      expect(report.matchedInteractionCount).toBe(2);
+      expect(filtered.map((event: TraceEvent) => event.type)).toEqual([
+        "session_start",
+        "tool_call",
+        "tool_call",
+        "tool_result",
+        "tool_result",
+        "session_end"
+      ]);
+      expect(filtered[1]).toMatchObject({ callId: "c1" });
+      expect(filtered[2]).toMatchObject({ callId: "c2" });
+      expect(filtered[3]).toMatchObject({ callId: "c1" });
+      expect(filtered[4]).toMatchObject({ callId: "c2" });
     });
   });
 });
