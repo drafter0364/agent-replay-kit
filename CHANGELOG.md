@@ -29,3 +29,4 @@
 - Added GitHub Action support for trace analysis mode.
 - Expanded sanitizer coverage for common high-confidence service tokens.
 - Added an optional LangChain JS tool wrapper example.
+- Expanded sanitizer sensitive-key matching for private keys, auth fields, passphrases, and connection strings.

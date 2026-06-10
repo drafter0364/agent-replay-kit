@@ -34,7 +34,7 @@ export interface SanitizedTrace {
   report: SanitizerReport;
 }
 
-const sensitiveKey = /(?:api[_-]?key|token|secret|password|authorization|cookie|credential)/i;
+const sensitiveKey = /(?:api[_-]?key|token|secret|password|authorization|cookie|credential|private[_-]?key|passphrase|connection[_-]?string)|(?:^|[_-])auth(?:$|[_-])/i;
 const defaultRules: SanitizerRule[] = [
   { name: "github-token", pattern: /\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{20,255}\b/g, replacement: "[GITHUB_TOKEN]", confidence: "high" },
   { name: "github-fine-grained-token", pattern: /\bgithub_pat_[A-Za-z0-9_]{20,255}\b/g, replacement: "[GITHUB_TOKEN]", confidence: "high" },

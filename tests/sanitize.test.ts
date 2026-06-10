@@ -48,6 +48,45 @@ describe("trace sanitizer", () => {
     );
   });
 
+  it("redacts newly covered sensitive key names without overmatching nearby words", () => {
+    const events: TraceEvent[] = [
+      { type: "session_start", schemaVersion: "1.0", sessionId: "s1", seq: 1 },
+      {
+        type: "tool_call",
+        sessionId: "s1",
+        callId: "c1",
+        tool: "http",
+        args: {
+          privateKey: "-----BEGIN PRIVATE KEY-----",
+          auth: "top-secret-auth",
+          passphrase: "swordfish",
+          connectionString: "postgres://user:pass@host/db",
+          author: "maintainer"
+        },
+        seq: 2
+      },
+      { type: "tool_result", sessionId: "s1", callId: "c1", tool: "http", ok: true, result: "ok", seq: 3 },
+      { type: "session_end", sessionId: "s1", ok: true, seq: 4 }
+    ];
+
+    const sanitized = sanitizeTraceEventsWithReport(events);
+    const raw = JSON.stringify(sanitized.events);
+
+    expect(raw).not.toContain("BEGIN PRIVATE KEY");
+    expect(raw).not.toContain("top-secret-auth");
+    expect(raw).not.toContain("swordfish");
+    expect(raw).not.toContain("postgres://user:pass@host/db");
+    expect(raw).toContain("\"author\":\"maintainer\"");
+    expect(sanitized.report.redactions.map((redaction) => redaction.path)).toEqual(
+      expect.arrayContaining([
+        "$[1].args.privateKey",
+        "$[1].args.auth",
+        "$[1].args.passphrase",
+        "$[1].args.connectionString"
+      ])
+    );
+  });
+
   it("preserves explicitly allowed URL hosts", () => {
     const events: TraceEvent[] = [
       { type: "session_start", schemaVersion: "1.0", sessionId: "s1", seq: 1 },
