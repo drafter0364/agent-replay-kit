@@ -55,7 +55,7 @@ export function sanitizeTraceEvents(events: TraceEvent[], options: SanitizerOpti
 
 export function sanitizeTraceEventsWithReport(events: TraceEvent[], options: SanitizerOptions = {}): SanitizedTrace {
   const context: SanitizerContext = {
-    rules: [...defaultRules, ...(options.rules ?? [])],
+    rules: buildSanitizerRules(options.rules),
     allowedUrlHosts: new Set((options.allowedUrlHosts ?? []).map((host) => host.toLowerCase()))
   };
   const redactions: SanitizerRedaction[] = [];
@@ -94,6 +94,10 @@ export async function sanitizeTraceFile(inputPath: string, outputPath: string, o
 interface SanitizerContext {
   rules: SanitizerRule[];
   allowedUrlHosts: Set<string>;
+}
+
+function buildSanitizerRules(rules: SanitizerRule[] | undefined): SanitizerRule[] {
+  return rules && rules.length > 0 ? defaultRules.concat(rules) : defaultRules;
 }
 
 function sanitizeValue(value: unknown, context: SanitizerContext, path: string, key?: string): { value: JsonValue; redactions: SanitizerRedaction[] } {
