@@ -257,6 +257,26 @@ describe("CLI", () => {
     });
   });
 
+  it("accepts full assertion policy fields from config files", async () => {
+    await withTempDir(async (dir) => {
+      const tracePath = join(dir, "trace.jsonl");
+      const assertConfigPath = join(dir, "assert-config.json");
+      const testConfigPath = join(dir, "test-config.json");
+      const io = { stdout: (_text: string) => undefined, stderr: (_text: string) => undefined };
+
+      await runCli(["record", "--out", tracePath, "--tool", "shell", "--args-json", "{\"command\":\"npm test\"}"], io);
+      await import("node:fs/promises").then(({ writeFile }) =>
+        Promise.all([
+          writeFile(assertConfigPath, JSON.stringify({ maxToolCalls: { shell: 0 } }), "utf8"),
+          writeFile(testConfigPath, JSON.stringify({ mustCall: ["shell"], maxToolCalls: { shell: 1 } }), "utf8")
+        ])
+      );
+
+      await expect(runCli(["assert", tracePath, "--config-file", assertConfigPath], io)).resolves.toBe(1);
+      await expect(runCli(["test", "--baseline", tracePath, "--actual", tracePath, "--config-file", testConfigPath], io)).resolves.toBe(0);
+    });
+  });
+
   it("reports invalid config files as command failures", async () => {
     await withTempDir(async (dir) => {
       const tracePath = join(dir, "trace.jsonl");

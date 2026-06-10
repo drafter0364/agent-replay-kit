@@ -101,6 +101,8 @@ agent-replay verify-integrity sealed.jsonl [--format markdown|json]
 
 Most commands also accept `--config-file config.json`. The file is a flat JSON object for the current command, and explicit CLI flags override config values.
 
+For `assert` and `test`, the config file can also contain the full assertion policy schema, such as `maxToolCalls`, `forbiddenSideEffects`, `mustUseArgs`, or `requiredOrder`.
+
 ## GitHub Action
 
 ```yaml
