@@ -53,4 +53,6 @@ agent-replay assert trace.jsonl --forbid-command-prefix "rm -rf"
 
 This is a policy check over recorded arguments. It is not a sandbox.
 
+`maxShellCalls` uses a simple tool-name heuristic. It currently counts tools whose names contain `shell`, `command`, `bash`, `powershell`, or `exec`.
+
 Prefer literal or prefix checks for common dangerous commands. Regex patterns are supported for local policy files, but Agent Replay Kit rejects invalid patterns, patterns longer than 200 characters, and simple nested-quantifier shapes that commonly cause catastrophic backtracking.

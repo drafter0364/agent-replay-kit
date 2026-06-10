@@ -31,3 +31,4 @@
 - Added an optional LangChain JS tool wrapper example.
 - Expanded sanitizer sensitive-key matching for private keys, auth fields, passphrases, and connection strings.
 - Expanded sanitizer Unix path coverage for `/etc`, `/opt`, `/root`, and `~/.ssh`.
+- Documented the shell-tool name heuristic used by `maxShellCalls`.

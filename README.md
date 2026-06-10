@@ -56,6 +56,8 @@ node dist/cli.js assert traces/demo.jsonl \
 
 JSON policies can also express behavior contracts: required tool order, required tool arguments, maximum tool duration, no failed tools, and successful session ending.
 
+`maxShellCalls` uses a simple name heuristic. It currently counts tools whose names contain `shell`, `command`, `bash`, `powershell`, or `exec`.
+
 ## SDK example
 
 ```ts
