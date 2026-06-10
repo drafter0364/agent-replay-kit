@@ -55,6 +55,7 @@ export {
   type TraceDiffMode,
   type TraceDiffOptions
 } from "./diff.js";
+export { filterTrace, filterTraceFile, type TraceFilterOptions, type TraceFilterReport } from "./filter.js";
 export {
   renderGoldenTraceRegressionMarkdown,
   testGoldenTraceRegression,

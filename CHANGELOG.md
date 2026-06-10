@@ -33,3 +33,4 @@
 - Expanded sanitizer Unix path coverage for `/etc`, `/opt`, `/root`, and `~/.ssh`.
 - Documented the shell-tool name heuristic used by `maxShellCalls`.
 - Replayer now rejects orphan, duplicate, and mismatched tool interaction events during setup.
+- Added a simple trace filter command for extracting tool interaction subsets.

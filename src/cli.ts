@@ -15,6 +15,7 @@ import { exportTraceFileToOtel } from "./otel.js";
 import { renderTraceIntegrityMarkdown, sealTraceFile, verifyTraceFileIntegrity } from "./integrity.js";
 import { analyzeTraceFile, renderTraceAnalysisMarkdown } from "./analyze.js";
 import { bundleTraceFile } from "./bundle.js";
+import { filterTraceFile } from "./filter.js";
 
 interface CliIo {
   stdout: (text: string) => void;
@@ -33,6 +34,7 @@ Commands:
   record --out trace.jsonl --tool name [--args-json '{}'] [--result-json '{}']
   replay trace.jsonl [--tool name --args-json '{}'] [--call-id id]
   diff old.jsonl new.jsonl [--format markdown|json]
+  filter trace.jsonl --out subset.jsonl [--tool name] [--call-id id] [--side-effect effect] [--ok true|false] [--format text|json]
   sanitize trace.jsonl --out public.jsonl [--format text|json]
   assert trace.jsonl [--policy policy.json] [--must-call tool] [--must-not-call tool] [--max-shell-calls n]
   test --baseline golden.jsonl --actual current.jsonl [--policy policy.json]
@@ -62,6 +64,8 @@ export async function runCli(argv: string[], io: CliIo = defaultIo): Promise<num
         return await runReplay(parsed, io);
       case "diff":
         return await runDiff(parsed, io);
+      case "filter":
+        return await runFilter(parsed, io);
       case "test":
         return await runTest(parsed, io);
       case "sanitize":
@@ -176,6 +180,24 @@ async function runDiff(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const diff = await diffTraceFiles(before, after, { mode });
   io.stdout(format === "json" ? JSON.stringify(diff, null, 2) + "\n" : renderTraceDiffMarkdown(diff));
   return diff.changed ? 1 : 0;
+}
+
+async function runFilter(parsed: ParsedArgs, io: CliIo): Promise<number> {
+  const trace = requiredPositional(parsed, 0, "trace file");
+  const out = requiredOption(parsed, "out");
+  const format = optionalOption(parsed, "format") ?? "text";
+  const report = await filterTraceFile(trace, out, {
+    tools: optionList(parsed, "tool"),
+    callIds: optionList(parsed, "call-id"),
+    sideEffects: optionList(parsed, "side-effect"),
+    ok: optionalBooleanOption(parsed, "ok")
+  });
+  if (format === "json") {
+    io.stdout(JSON.stringify({ output: out, ...report }, null, 2) + "\n");
+  } else {
+    io.stdout(`Wrote filtered trace to ${out} (${report.outputEventCount}/${report.inputEventCount} events)\n`);
+  }
+  return 0;
 }
 
 async function runTest(parsed: ParsedArgs, io: CliIo): Promise<number> {
@@ -329,6 +351,20 @@ function optionalNumberOption(parsed: ParsedArgs, name: string): number | undefi
     throw new Error(`--${name} must be a number`);
   }
   return parsedValue;
+}
+
+function optionalBooleanOption(parsed: ParsedArgs, name: string): boolean | undefined {
+  const value = optionalOption(parsed, name);
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === "true") {
+    return true;
+  }
+  if (value === "false") {
+    return false;
+  }
+  throw new Error(`--${name} must be true or false`);
 }
 
 function parseJsonOption(parsed: ParsedArgs, name: string, fallback: JsonValue): JsonValue {
