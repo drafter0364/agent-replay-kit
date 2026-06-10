@@ -111,6 +111,39 @@ describe("trace sanitizer", () => {
     expect(raw).not.toContain("private.example.com");
   });
 
+  it("redacts additional sensitive unix-style paths", () => {
+    const events: TraceEvent[] = [
+      { type: "session_start", schemaVersion: "1.0", sessionId: "s1", seq: 1 },
+      {
+        type: "tool_call",
+        sessionId: "s1",
+        callId: "c1",
+        tool: "shell",
+        args: {},
+        seq: 2
+      },
+      {
+        type: "tool_result",
+        sessionId: "s1",
+        callId: "c1",
+        tool: "shell",
+        ok: true,
+        result: "cp /etc/hosts /opt/app/config ~/.ssh/id_rsa /root/.bashrc",
+        seq: 3
+      },
+      { type: "session_end", sessionId: "s1", ok: true, seq: 4 }
+    ];
+
+    const sanitized = sanitizeTraceEventsWithReport(events);
+    const raw = JSON.stringify(sanitized.events);
+
+    expect(raw).not.toContain("/etc/hosts");
+    expect(raw).not.toContain("/opt/app/config");
+    expect(raw).not.toContain("~/.ssh/id_rsa");
+    expect(raw).not.toContain("/root/.bashrc");
+    expect(sanitized.report.redactions).toEqual(expect.arrayContaining([expect.objectContaining({ rule: "unix-path" })]));
+  });
+
   it("applies custom sanitizer rules", () => {
     const events: TraceEvent[] = [
       { type: "session_start", schemaVersion: "1.0", sessionId: "s1", seq: 1 },

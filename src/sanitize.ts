@@ -46,7 +46,7 @@ const defaultRules: SanitizerRule[] = [
   { name: "email", pattern: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, replacement: "[EMAIL]", confidence: "medium" },
   { name: "url", pattern: /\bhttps?:\/\/[^\s"')]+/g, replacement: "[URL]", confidence: "medium" },
   { name: "windows-path", pattern: /\b[A-Za-z]:\\(?:[^\s"'\\]+\\)*[^\s"'\\]+/g, replacement: "[PATH]", confidence: "medium" },
-  { name: "unix-path", pattern: /\b(?:\/Users|\/home|\/tmp|\/var\/folders)\/[^\s"')]+/g, replacement: "[PATH]", confidence: "medium" }
+  { name: "unix-path", pattern: /(?:~\/\.ssh\/[^\s"')]+)|(?:(?:\/Users|\/home|\/tmp|\/var\/folders|\/etc|\/opt|\/root)\/[^\s"')]+)/g, replacement: "[PATH]", confidence: "medium" }
 ];
 
 export function sanitizeTraceEvents(events: TraceEvent[], options: SanitizerOptions = {}): TraceEvent[] {
