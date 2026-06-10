@@ -1,13 +1,4 @@
-import type {
-  AssertionEvent,
-  ModelMessageEvent,
-  SessionEndEvent,
-  SessionStartEvent,
-  ToolCallEvent,
-  ToolResultEvent,
-  TraceEvent,
-  TraceValidationResult
-} from "./types.js";
+import type { TraceEvent, TraceValidationResult } from "./types.js";
 import { isJsonValue, isRecord } from "./utils.js";
 
 export const DEFAULT_MAX_TRACE_LINE_LENGTH = 1024 * 1024;
@@ -116,36 +107,34 @@ export function parseTraceLine(line: string, lineNumber = 0, options: ParseTrace
 }
 
 function validateSessionStart(value: Record<string, unknown>, errors: string[]): void {
-  const event = value as Partial<SessionStartEvent>;
-  if (event.schemaVersion !== "1.0") {
+  if (value.schemaVersion !== "1.0") {
     errors.push("session_start.schemaVersion must be 1.0");
   }
-  if (typeof event.sessionId !== "string" || event.sessionId.length === 0) {
+  if (typeof value.sessionId !== "string" || value.sessionId.length === 0) {
     errors.push("session_start.sessionId must be a non-empty string");
   }
-  if ("agent" in event && typeof event.agent !== "string") {
+  if ("agent" in value && typeof value.agent !== "string") {
     errors.push("session_start.agent must be a string");
   }
-  if ("runId" in event && typeof event.runId !== "string") {
+  if ("runId" in value && typeof value.runId !== "string") {
     errors.push("session_start.runId must be a string");
   }
-  if ("input" in event && !isJsonValue(event.input)) {
+  if ("input" in value && !isJsonValue(value.input)) {
     errors.push("session_start.input must be a JSON value");
   }
 }
 
 function validateModelMessage(value: Record<string, unknown>, errors: string[]): void {
-  const event = value as Partial<ModelMessageEvent>;
-  if (!["system", "user", "assistant", "tool"].includes(String(event.role))) {
+  if (!["system", "user", "assistant", "tool"].includes(String(value.role))) {
     errors.push("model_message.role must be system, user, assistant, or tool");
   }
-  if ("content" in event && typeof event.content !== "string") {
+  if ("content" in value && typeof value.content !== "string") {
     errors.push("model_message.content must be a string");
   }
-  if ("toolCalls" in event && !Array.isArray(event.toolCalls)) {
+  if ("toolCalls" in value && !Array.isArray(value.toolCalls)) {
     errors.push("model_message.toolCalls must be an array");
-  } else if (Array.isArray(event.toolCalls)) {
-    event.toolCalls.forEach((toolCall, index) => {
+  } else if (Array.isArray(value.toolCalls)) {
+    value.toolCalls.forEach((toolCall, index) => {
       if (!isRecord(toolCall)) {
         errors.push(`model_message.toolCalls[${index}] must be an object`);
         return;
@@ -166,79 +155,75 @@ function validateModelMessage(value: Record<string, unknown>, errors: string[]):
 }
 
 function validateToolCall(value: Record<string, unknown>, errors: string[]): void {
-  const event = value as Partial<ToolCallEvent>;
-  if (typeof event.callId !== "string" || event.callId.length === 0) {
+  if (typeof value.callId !== "string" || value.callId.length === 0) {
     errors.push("tool_call.callId must be a non-empty string");
   }
-  if (typeof event.tool !== "string" || event.tool.length === 0) {
+  if (typeof value.tool !== "string" || value.tool.length === 0) {
     errors.push("tool_call.tool must be a non-empty string");
   }
-  if (!("args" in event)) {
+  if (!("args" in value)) {
     errors.push("tool_call.args is required");
-  } else if (!isJsonValue(event.args)) {
+  } else if (!isJsonValue(value.args)) {
     errors.push("tool_call.args must be a JSON value");
   }
 }
 
 function validateToolResult(value: Record<string, unknown>, errors: string[]): void {
-  const event = value as Partial<ToolResultEvent>;
-  if (typeof event.callId !== "string" || event.callId.length === 0) {
+  if (typeof value.callId !== "string" || value.callId.length === 0) {
     errors.push("tool_result.callId must be a non-empty string");
   }
-  if (typeof event.tool !== "string" || event.tool.length === 0) {
+  if (typeof value.tool !== "string" || value.tool.length === 0) {
     errors.push("tool_result.tool must be a non-empty string");
   }
-  if (typeof event.ok !== "boolean") {
+  if (typeof value.ok !== "boolean") {
     errors.push("tool_result.ok must be a boolean");
   }
-  if (event.ok === false && (!event.error || typeof event.error.message !== "string")) {
+  if (value.ok === false && (!isRecord(value.error) || typeof value.error.message !== "string")) {
     errors.push("tool_result.error.message is required when ok is false");
   }
-  if (event.ok === true && !("result" in event)) {
+  if (value.ok === true && !("result" in value)) {
     errors.push("tool_result.result is required when ok is true");
   }
-  if ("result" in event && !isJsonValue(event.result)) {
+  if ("result" in value && !isJsonValue(value.result)) {
     errors.push("tool_result.result must be a JSON value");
   }
-  if (event.error) {
-    if ("name" in event.error && typeof event.error.name !== "string") {
+  if (isRecord(value.error)) {
+    if ("name" in value.error && typeof value.error.name !== "string") {
       errors.push("tool_result.error.name must be a string");
     }
-    if ("stack" in event.error && typeof event.error.stack !== "string") {
+    if ("stack" in value.error && typeof value.error.stack !== "string") {
       errors.push("tool_result.error.stack must be a string");
     }
   }
-  if ("durationMs" in event && typeof event.durationMs !== "number") {
+  if ("durationMs" in value && typeof value.durationMs !== "number") {
     errors.push("tool_result.durationMs must be a number");
-  } else if ("durationMs" in event && typeof event.durationMs === "number" && event.durationMs < 0) {
+  } else if ("durationMs" in value && typeof value.durationMs === "number" && value.durationMs < 0) {
     errors.push("tool_result.durationMs must be non-negative");
   }
 }
 
 function validateAssertion(value: Record<string, unknown>, errors: string[]): void {
-  const event = value as Partial<AssertionEvent>;
-  if (typeof event.name !== "string" || event.name.length === 0) {
+  if (typeof value.name !== "string" || value.name.length === 0) {
     errors.push("assertion.name must be a non-empty string");
   }
-  if (typeof event.ok !== "boolean") {
+  if (typeof value.ok !== "boolean") {
     errors.push("assertion.ok must be a boolean");
   }
-  if ("message" in event && typeof event.message !== "string") {
+  if ("message" in value && typeof value.message !== "string") {
     errors.push("assertion.message must be a string");
   }
 }
 
 function validateSessionEnd(value: Record<string, unknown>, errors: string[]): void {
-  const event = value as Partial<SessionEndEvent>;
-  if ("ok" in event && typeof event.ok !== "boolean") {
+  if ("ok" in value && typeof value.ok !== "boolean") {
     errors.push("session_end.ok must be a boolean");
   }
-  if ("durationMs" in event && typeof event.durationMs !== "number") {
+  if ("durationMs" in value && typeof value.durationMs !== "number") {
     errors.push("session_end.durationMs must be a number");
-  } else if ("durationMs" in event && typeof event.durationMs === "number" && event.durationMs < 0) {
+  } else if ("durationMs" in value && typeof value.durationMs === "number" && value.durationMs < 0) {
     errors.push("session_end.durationMs must be non-negative");
   }
-  if ("summary" in event && typeof event.summary !== "string") {
+  if ("summary" in value && typeof value.summary !== "string") {
     errors.push("session_end.summary must be a string");
   }
 }
