@@ -38,3 +38,4 @@
 - Added generic `--config-file` support for CLI commands.
 - Added simple metadata filtering to the trace filter command.
 - Analyze now warns when external actions happen before verification reads.
+- Schema validation now rejects overly deep or oversized JSON payloads.

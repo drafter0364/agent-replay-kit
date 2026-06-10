@@ -2,6 +2,8 @@ import type { TraceEvent, TraceValidationResult } from "./types.js";
 import { isJsonValue, isRecord } from "./utils.js";
 
 export const DEFAULT_MAX_TRACE_LINE_LENGTH = 1024 * 1024;
+const DEFAULT_MAX_JSON_DEPTH = 20;
+const DEFAULT_MAX_JSON_COLLECTION_SIZE = 1000;
 
 export interface ParseTraceLineOptions {
   maxLineLength?: number;
@@ -39,8 +41,10 @@ export function validateTraceEvent(value: unknown): TraceValidationResult {
   if ("sessionId" in value && typeof value.sessionId !== "string") {
     errors.push("event.sessionId must be a string");
   }
-  if ("metadata" in value && !isRecord(value.metadata)) {
-    errors.push("event.metadata must be an object");
+  if ("metadata" in value && (!isRecord(value.metadata) || !isJsonValue(value.metadata))) {
+    errors.push("event.metadata must be a JSON object");
+  } else if ("metadata" in value && isRecord(value.metadata) && isJsonValue(value.metadata)) {
+    validateJsonComplexity(value.metadata, "event.metadata", errors);
   }
   if ("hash" in value && typeof value.hash !== "string") {
     errors.push("event.hash must be a string");
@@ -121,6 +125,8 @@ function validateSessionStart(value: Record<string, unknown>, errors: string[]):
   }
   if ("input" in value && !isJsonValue(value.input)) {
     errors.push("session_start.input must be a JSON value");
+  } else if ("input" in value && isJsonValue(value.input)) {
+    validateJsonComplexity(value.input, "session_start.input", errors);
   }
 }
 
@@ -149,6 +155,8 @@ function validateModelMessage(value: Record<string, unknown>, errors: string[]):
         errors.push(`model_message.toolCalls[${index}].args is required`);
       } else if (!isJsonValue(toolCall.args)) {
         errors.push(`model_message.toolCalls[${index}].args must be a JSON value`);
+      } else {
+        validateJsonComplexity(toolCall.args, `model_message.toolCalls[${index}].args`, errors);
       }
     });
   }
@@ -165,6 +173,8 @@ function validateToolCall(value: Record<string, unknown>, errors: string[]): voi
     errors.push("tool_call.args is required");
   } else if (!isJsonValue(value.args)) {
     errors.push("tool_call.args must be a JSON value");
+  } else {
+    validateJsonComplexity(value.args, "tool_call.args", errors);
   }
 }
 
@@ -186,6 +196,8 @@ function validateToolResult(value: Record<string, unknown>, errors: string[]): v
   }
   if ("result" in value && !isJsonValue(value.result)) {
     errors.push("tool_result.result must be a JSON value");
+  } else if ("result" in value && isJsonValue(value.result)) {
+    validateJsonComplexity(value.result, "tool_result.result", errors);
   }
   if (isRecord(value.error)) {
     if ("name" in value.error && typeof value.error.name !== "string") {
@@ -226,4 +238,47 @@ function validateSessionEnd(value: Record<string, unknown>, errors: string[]): v
   if ("summary" in value && typeof value.summary !== "string") {
     errors.push("session_end.summary must be a string");
   }
+}
+
+function validateJsonComplexity(value: unknown, label: string, errors: string[]): void {
+  const issue = getJsonComplexityIssue(value, 1);
+  if (!issue) {
+    return;
+  }
+  errors.push(`${label} ${issue}`);
+}
+
+function getJsonComplexityIssue(value: unknown, depth: number): string | undefined {
+  if (depth > DEFAULT_MAX_JSON_DEPTH) {
+    return `exceeds max depth ${DEFAULT_MAX_JSON_DEPTH}`;
+  }
+
+  if (Array.isArray(value)) {
+    if (value.length > DEFAULT_MAX_JSON_COLLECTION_SIZE) {
+      return `exceeds max array length ${DEFAULT_MAX_JSON_COLLECTION_SIZE}`;
+    }
+    for (const item of value) {
+      const issue = getJsonComplexityIssue(item, depth + 1);
+      if (issue) {
+        return issue;
+      }
+    }
+    return undefined;
+  }
+
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const entries = Object.entries(value);
+  if (entries.length > DEFAULT_MAX_JSON_COLLECTION_SIZE) {
+    return `exceeds max object size ${DEFAULT_MAX_JSON_COLLECTION_SIZE}`;
+  }
+  for (const [, nested] of entries) {
+    const issue = getJsonComplexityIssue(nested, depth + 1);
+    if (issue) {
+      return issue;
+    }
+  }
+  return undefined;
 }

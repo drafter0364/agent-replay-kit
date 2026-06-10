@@ -51,6 +51,19 @@ describe("trace schema", () => {
     expect(result.errors).toContain("session_start.runId must be a string");
   });
 
+  it("rejects invalid nested metadata values", () => {
+    const result = validateTraceEvent({
+      type: "tool_call",
+      callId: "c1",
+      tool: "shell",
+      args: {},
+      metadata: { nested: { invalid: undefined } }
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.errors).toContain("event.metadata must be a JSON object");
+  });
+
   it("validates model tool call structure", () => {
     const result = validateTraceEvent({
       type: "model_message",
@@ -113,5 +126,31 @@ describe("trace schema", () => {
     ).toContain("session_end.durationMs must be non-negative");
 
     expect(() => parseTraceLine("{\"type\":\"session_end\"}", 1, { maxLineLength: 5 })).toThrow(/exceeds max length/);
+  });
+
+  it("rejects excessively deep or large JSON payloads", () => {
+    let deep: unknown = "leaf";
+    for (let index = 0; index < 21; index += 1) {
+      deep = { nested: deep };
+    }
+    const oversizedArgs = Array.from({ length: 1001 }, () => "x");
+
+    const deepResult = validateTraceEvent({
+      type: "session_start",
+      schemaVersion: "1.0",
+      sessionId: "s1",
+      input: deep
+    });
+    const largeResult = validateTraceEvent({
+      type: "tool_call",
+      callId: "c1",
+      tool: "shell",
+      args: oversizedArgs
+    });
+
+    expect(deepResult.ok).toBe(false);
+    expect(deepResult.errors.join("\n")).toContain("session_start.input exceeds max depth");
+    expect(largeResult.ok).toBe(false);
+    expect(largeResult.errors.join("\n")).toContain("tool_call.args exceeds max array length");
   });
 });

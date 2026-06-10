@@ -113,7 +113,7 @@ describe("TraceRecorder", () => {
         "model_message.role must be system, user, assistant, or tool"
       );
       await expect(recorder.toolCall("shell", undefined as never)).rejects.toThrow("tool_call.args is required");
-      await expect(recorder.end({ metadata: [] as never })).rejects.toThrow("event.metadata must be an object");
+      await expect(recorder.end({ metadata: [] as never })).rejects.toThrow("event.metadata must be a JSON object");
       await recorder.end({ ok: true });
 
       const events = await readTraceFile(tracePath);
