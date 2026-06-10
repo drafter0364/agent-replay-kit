@@ -13,6 +13,7 @@ Tool-using agents are hard to debug because the model, tools, and environment ca
 Agent Replay Kit gives maintainers a small deterministic core:
 
 - Record tool calls and results from any agent runtime.
+- Optionally record model-facing messages when prompt/response diffs matter.
 - Replay recorded tool results without executing side effects.
 - Diff traces after prompt, model, or tool changes.
 - Sanitize traces before sharing them in issues.
@@ -129,6 +130,8 @@ See [docs/trace-schema.md](docs/trace-schema.md) for the event model.
 Files ending in `.jsonl.gz` are read and written as gzip-compressed traces.
 
 `agent-replay filter` extracts matching tool interactions and keeps session boundary events so the output remains a reusable trace subset. It also supports simple metadata matching such as `--metadata framework=mcp` or `--metadata audit.retries=1`.
+
+`model_message` events are optional. They are useful for prompt/response diffing and debugging agent reasoning steps, but replay only depends on recorded tool interactions.
 
 ## Project status
 
