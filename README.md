@@ -98,6 +98,8 @@ agent-replay seal trace.jsonl --out sealed.jsonl
 agent-replay verify-integrity sealed.jsonl [--format markdown|json]
 ```
 
+Most commands also accept `--config-file config.json`. The file is a flat JSON object for the current command, and explicit CLI flags override config values.
+
 ## GitHub Action
 
 ```yaml

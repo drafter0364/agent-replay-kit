@@ -201,6 +201,38 @@ describe("CLI", () => {
     });
   });
 
+  it("loads command options from a config file and lets CLI flags override them", async () => {
+    await withTempDir(async (dir) => {
+      const tracePath = join(dir, "trace.jsonl");
+      const configPath = join(dir, "assert-config.json");
+      const io = { stdout: (_text: string) => undefined, stderr: (_text: string) => undefined };
+
+      await runCli(["record", "--out", tracePath, "--tool", "shell", "--args-json", "{\"command\":\"npm test\"}"], io);
+      await import("node:fs/promises").then(({ writeFile }) =>
+        writeFile(configPath, JSON.stringify({ mustCall: ["shell"], maxShellCalls: 0, format: "json" }), "utf8")
+      );
+
+      await expect(runCli(["assert", tracePath, "--config-file", configPath, "--max-shell-calls", "2"], io)).resolves.toBe(0);
+      await expect(runCli(["assert", tracePath, "--config-file", configPath], io)).resolves.toBe(1);
+    });
+  });
+
+  it("reports invalid config files as command failures", async () => {
+    await withTempDir(async (dir) => {
+      const tracePath = join(dir, "trace.jsonl");
+      const configPath = join(dir, "bad-config.json");
+      const output: string[] = [];
+      const io = { stdout: (text: string) => output.push(text), stderr: (text: string) => output.push(text) };
+
+      await runCli(["record", "--out", tracePath, "--tool", "shell", "--args-json", "{\"command\":\"npm test\"}"], io);
+      await import("node:fs/promises").then(({ writeFile }) => writeFile(configPath, "[1,2,3]", "utf8"));
+
+      await expect(runCli(["assert", tracePath, "--config-file", configPath], io)).resolves.toBe(1);
+      expect(output.join("")).toContain("Config file");
+      expect(output.join("")).toContain("must be a JSON object");
+    });
+  });
+
   it("reports validation failures from the CLI", async () => {
     await withTempDir(async (dir) => {
       const tracePath = join(dir, "invalid.jsonl");
