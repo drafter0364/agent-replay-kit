@@ -39,6 +39,7 @@ export function analyzeTrace(events: TraceEvent[], options: AnalyzeTraceOptions 
     ...findRepeatedToolCalls(indexedCalls),
     ...findExcessiveShellCalls(indexedCalls, maxShellCalls),
     ...findWriteBeforeRead(indexedCalls),
+    ...findExternalActionBeforeVerification(indexedCalls),
     ...findFailedToolButSuccessfulSession(events)
   ];
   const warnings = findings.filter((finding) => finding.severity === "warning").length;
@@ -138,6 +139,31 @@ function findWriteBeforeRead(indexedCalls: Array<{ event: ToolCallEvent; index: 
       ];
     }
   }
+  return [];
+}
+
+function findExternalActionBeforeVerification(indexedCalls: Array<{ event: ToolCallEvent; index: number }>): TraceAnalysisFinding[] {
+  let sawVerificationRead = false;
+
+  for (const item of indexedCalls) {
+    const sideEffect = getSideEffect(item.event);
+    if (sideEffect === "read") {
+      sawVerificationRead = true;
+      continue;
+    }
+    if ((sideEffect === "network" || sideEffect === "external-state") && !sawVerificationRead) {
+      return [
+        {
+          rule: "external-action-before-verification",
+          severity: "warning",
+          message: `Tool ${item.event.tool} performed ${sideEffect} before any read side effect was recorded`,
+          eventIndexes: [item.index],
+          callIds: [item.event.callId]
+        }
+      ];
+    }
+  }
+
   return [];
 }
 

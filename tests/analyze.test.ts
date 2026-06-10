@@ -44,4 +44,35 @@ describe("trace analysis", () => {
     expect(report.summary).toEqual({ findings: 4, warnings: 3, errors: 1 });
     expect(renderTraceAnalysisMarkdown(report)).toContain("failed-tool-session-ok");
   });
+
+  it("flags external actions before verification reads", () => {
+    const events: TraceEvent[] = [
+      { type: "session_start", schemaVersion: "1.0", sessionId: "s1" },
+      { type: "tool_call", callId: "c1", tool: "send_message", args: { text: "done" }, metadata: { sideEffect: "external-state" } },
+      { type: "tool_result", callId: "c1", tool: "send_message", ok: true },
+      { type: "tool_call", callId: "c2", tool: "read_file", args: { path: "README.md" }, metadata: { sideEffect: "read" } },
+      { type: "tool_result", callId: "c2", tool: "read_file", ok: true },
+      { type: "session_end", ok: true }
+    ];
+
+    const report = analyzeTrace(events);
+
+    expect(report.ok).toBe(false);
+    expect(report.findings.map((finding) => finding.rule)).toContain("external-action-before-verification");
+  });
+
+  it("does not flag external actions after a verification read", () => {
+    const events: TraceEvent[] = [
+      { type: "session_start", schemaVersion: "1.0", sessionId: "s1" },
+      { type: "tool_call", callId: "c1", tool: "read_file", args: { path: "README.md" }, metadata: { sideEffect: "read" } },
+      { type: "tool_result", callId: "c1", tool: "read_file", ok: true },
+      { type: "tool_call", callId: "c2", tool: "http_post", args: { url: "https://example.test" }, metadata: { sideEffect: "network" } },
+      { type: "tool_result", callId: "c2", tool: "http_post", ok: true },
+      { type: "session_end", ok: true }
+    ];
+
+    const report = analyzeTrace(events);
+
+    expect(report.findings.map((finding) => finding.rule)).not.toContain("external-action-before-verification");
+  });
 });
