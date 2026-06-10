@@ -1,12 +1,14 @@
 import { readTraceFile, writeTraceFile } from "./io.js";
 import { collectToolInteractions } from "./replay.js";
-import type { RecordedToolInteraction, TraceEvent } from "./types.js";
+import type { JsonValue, RecordedToolInteraction, TraceEvent } from "./types.js";
+import { isRecord, stableStringify } from "./utils.js";
 
 export interface TraceFilterOptions {
   tools?: string[];
   callIds?: string[];
   sideEffects?: string[];
   ok?: boolean;
+  metadata?: Record<string, JsonValue>;
 }
 
 export interface TraceFilterReport {
@@ -73,7 +75,8 @@ function hasActiveFilter(options: TraceFilterOptions): boolean {
     (options.tools?.length ?? 0) > 0 ||
     (options.callIds?.length ?? 0) > 0 ||
     (options.sideEffects?.length ?? 0) > 0 ||
-    options.ok !== undefined
+    options.ok !== undefined ||
+    Object.keys(options.metadata ?? {}).length > 0
   );
 }
 
@@ -90,6 +93,9 @@ function matchesInteraction(interaction: RecordedToolInteraction, options: Trace
   if (options.ok !== undefined && interaction.result?.ok !== options.ok) {
     return false;
   }
+  if (options.metadata && !matchesMetadata(interaction.call.metadata, options.metadata)) {
+    return false;
+  }
   return true;
 }
 
@@ -99,4 +105,19 @@ function includeSessionBoundaryEvents(events: TraceEvent[]): TraceEvent[] {
 
 function getSideEffect(metadata: TraceEvent["metadata"]): string {
   return typeof metadata?.sideEffect === "string" ? metadata.sideEffect : "";
+}
+
+function matchesMetadata(metadata: TraceEvent["metadata"], filters: Record<string, JsonValue>): boolean {
+  return Object.entries(filters).every(([path, expected]) => stableStringify(getMetadataValue(metadata, path)) === stableStringify(expected));
+}
+
+function getMetadataValue(metadata: TraceEvent["metadata"], path: string): JsonValue | undefined {
+  let current: unknown = metadata;
+  for (const segment of path.split(".")) {
+    if (!isRecord(current) || !(segment in current)) {
+      return undefined;
+    }
+    current = current[segment];
+  }
+  return current as JsonValue | undefined;
 }

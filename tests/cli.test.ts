@@ -52,6 +52,7 @@ describe("CLI", () => {
     await withTempDir(async (dir) => {
       const tracePath = join(dir, "trace.jsonl");
       const filteredPath = join(dir, "filtered.jsonl");
+      const configPath = join(dir, "filter-config.json");
       const io = { stdout: (_text: string) => undefined, stderr: (_text: string) => undefined };
 
       await import("node:fs/promises").then(({ writeFile }) =>
@@ -59,9 +60,9 @@ describe("CLI", () => {
           tracePath,
           [
             "{\"type\":\"session_start\",\"schemaVersion\":\"1.0\",\"sessionId\":\"s1\"}",
-            "{\"type\":\"tool_call\",\"callId\":\"c1\",\"tool\":\"shell\",\"args\":{\"command\":\"npm test\"},\"metadata\":{\"sideEffect\":\"write\"}}",
+            "{\"type\":\"tool_call\",\"callId\":\"c1\",\"tool\":\"shell\",\"args\":{\"command\":\"npm test\"},\"metadata\":{\"sideEffect\":\"write\",\"framework\":\"local\"}}",
             "{\"type\":\"tool_result\",\"callId\":\"c1\",\"tool\":\"shell\",\"ok\":true,\"result\":{\"exitCode\":0}}",
-            "{\"type\":\"tool_call\",\"callId\":\"c2\",\"tool\":\"read_file\",\"args\":{\"path\":\"README.md\"},\"metadata\":{\"sideEffect\":\"read\"}}",
+            "{\"type\":\"tool_call\",\"callId\":\"c2\",\"tool\":\"read_file\",\"args\":{\"path\":\"README.md\"},\"metadata\":{\"sideEffect\":\"read\",\"framework\":\"mcp\",\"audit\":{\"retries\":1}}}",
             "{\"type\":\"tool_result\",\"callId\":\"c2\",\"tool\":\"read_file\",\"ok\":false,\"error\":{\"message\":\"missing\"}}",
             "{\"type\":\"session_end\",\"ok\":true}"
           ].join("\n") + "\n",
@@ -69,7 +70,21 @@ describe("CLI", () => {
         )
       );
 
-      await expect(runCli(["filter", tracePath, "--out", filteredPath, "--tool", "read_file", "--ok", "false"], io)).resolves.toBe(0);
+      await import("node:fs/promises").then(({ writeFile }) =>
+        writeFile(configPath, JSON.stringify({ metadata: { framework: "mcp", audit: { retries: 1 } } }), "utf8")
+      );
+
+      await expect(
+        runCli(["filter", tracePath, "--out", filteredPath, "--tool", "read_file", "--metadata", "framework=mcp", "--ok", "false"], io)
+      ).resolves.toBe(0);
+      expect((await readTraceFile(filteredPath)).map((event) => event.type)).toEqual([
+        "session_start",
+        "tool_call",
+        "tool_result",
+        "session_end"
+      ]);
+
+      await expect(runCli(["filter", tracePath, "--out", filteredPath, "--config-file", configPath], io)).resolves.toBe(0);
       expect((await readTraceFile(filteredPath)).map((event) => event.type)).toEqual([
         "session_start",
         "tool_call",

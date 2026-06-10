@@ -39,7 +39,7 @@ Commands:
   record --out trace.jsonl --tool name [--args-json '{}'] [--result-json '{}']
   replay trace.jsonl [--tool name --args-json '{}'] [--call-id id]
   diff old.jsonl new.jsonl [--mode positional|semantic] [--format markdown|json]
-  filter trace.jsonl --out subset.jsonl [--tool name] [--call-id id] [--side-effect effect] [--ok true|false] [--format text|json]
+  filter trace.jsonl --out subset.jsonl [--tool name] [--call-id id] [--side-effect effect] [--metadata key=value] [--ok true|false] [--format text|json]
   sanitize trace.jsonl --out public.jsonl [--format text|json]
   assert trace.jsonl [--policy policy.json] [--must-call tool] [--must-not-call tool] [--max-shell-calls n]
   test --baseline golden.jsonl --actual current.jsonl [--policy policy.json]
@@ -201,6 +201,7 @@ async function runFilter(parsed: ParsedArgs, io: CliIo): Promise<number> {
     tools: optionListWithConfig(parsed, "tool"),
     callIds: optionListWithConfig(parsed, "call-id"),
     sideEffects: optionListWithConfig(parsed, "side-effect"),
+    metadata: metadataFiltersWithConfig(parsed),
     ok: optionalBooleanOptionWithConfig(parsed, "ok")
   });
   if (format === "json") {
@@ -486,6 +487,21 @@ function hasOptionWithConfig(parsed: ParsedArgs, name: string): boolean {
   return optionalOption(parsed, name) !== undefined || getConfigValue(parsed.config, name) !== undefined;
 }
 
+function metadataFiltersWithConfig(parsed: ParsedArgs): Record<string, JsonValue> | undefined {
+  const optionValue = optionList(parsed, "metadata");
+  if (optionValue !== undefined) {
+    return parseMetadataFilterTokens(optionValue);
+  }
+  const configValue = getConfigValue(parsed.config, "metadata");
+  if (configValue === undefined) {
+    return undefined;
+  }
+  if (!isRecord(configValue)) {
+    throw new Error(`--metadata in config file must be an object`);
+  }
+  return flattenMetadataConfig(configValue);
+}
+
 function parseDiffMode(value: string): "positional" | "semantic" {
   if (value !== "positional" && value !== "semantic") {
     throw new Error("--mode must be positional or semantic");
@@ -546,6 +562,51 @@ function parseBooleanOptionValue(name: string, value: string): boolean {
     return false;
   }
   throw new Error(`--${name} must be true or false`);
+}
+
+function parseMetadataFilterTokens(tokens: string[]): Record<string, JsonValue> {
+  const filters: Record<string, JsonValue> = {};
+  for (const token of tokens) {
+    const separator = token.indexOf("=");
+    if (separator < 1) {
+      throw new Error(`--metadata must use key=value format`);
+    }
+    const key = token.slice(0, separator);
+    const rawValue = token.slice(separator + 1);
+    filters[key] = parseLooseJsonValue(rawValue);
+  }
+  return filters;
+}
+
+function flattenMetadataConfig(
+  value: Record<string, unknown>,
+  prefix = ""
+): Record<string, JsonValue> {
+  const filters: Record<string, JsonValue> = {};
+  for (const [key, nestedValue] of Object.entries(value)) {
+    const path = prefix ? `${prefix}.${key}` : key;
+    if (isRecord(nestedValue)) {
+      Object.assign(filters, flattenMetadataConfig(nestedValue, path));
+      continue;
+    }
+    if (!isJsonValue(nestedValue)) {
+      throw new Error(`--metadata in config file must contain only JSON values`);
+    }
+    filters[path] = nestedValue;
+  }
+  return filters;
+}
+
+function parseLooseJsonValue(value: string): JsonValue {
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (isJsonValue(parsed)) {
+      return parsed;
+    }
+  } catch {
+    return value;
+  }
+  return value;
 }
 
 const defaultIo: CliIo = {

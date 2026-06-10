@@ -7,9 +7,25 @@ import { withTempDir } from "./helpers.js";
 const events: TraceEvent[] = [
   { type: "session_start", schemaVersion: "1.0", sessionId: "s1", seq: 1 },
   { type: "model_message", sessionId: "s1", role: "assistant", content: "checking tools", seq: 2 },
-  { type: "tool_call", sessionId: "s1", callId: "c1", tool: "shell", args: { command: "npm test" }, metadata: { sideEffect: "write" }, seq: 3 },
+  {
+    type: "tool_call",
+    sessionId: "s1",
+    callId: "c1",
+    tool: "shell",
+    args: { command: "npm test" },
+    metadata: { sideEffect: "write", framework: "local", audit: { retries: 0 } },
+    seq: 3
+  },
   { type: "tool_result", sessionId: "s1", callId: "c1", tool: "shell", ok: true, result: { exitCode: 0 }, seq: 4 },
-  { type: "tool_call", sessionId: "s1", callId: "c2", tool: "read_file", args: { path: "README.md" }, metadata: { sideEffect: "read" }, seq: 5 },
+  {
+    type: "tool_call",
+    sessionId: "s1",
+    callId: "c2",
+    tool: "read_file",
+    args: { path: "README.md" },
+    metadata: { sideEffect: "read", framework: "mcp", audit: { retries: 1 } },
+    seq: 5
+  },
   { type: "tool_result", sessionId: "s1", callId: "c2", tool: "read_file", ok: false, error: { message: "missing" }, seq: 6 },
   { type: "session_end", sessionId: "s1", ok: false, seq: 7 }
 ];
@@ -29,6 +45,14 @@ describe("trace filter", () => {
 
   it("supports side-effect and ok filters", () => {
     const filtered = filterTrace(events, { sideEffects: ["read"], ok: false });
+
+    expect(filtered.map((event) => event.type)).toEqual(["session_start", "tool_call", "tool_result", "session_end"]);
+    expect(filtered[1]).toMatchObject({ tool: "read_file", callId: "c2" });
+    expect(filtered[2]).toMatchObject({ tool: "read_file", callId: "c2", ok: false });
+  });
+
+  it("supports metadata filtering with dotted paths", () => {
+    const filtered = filterTrace(events, { metadata: { framework: "mcp", "audit.retries": 1 } });
 
     expect(filtered.map((event) => event.type)).toEqual(["session_start", "tool_call", "tool_result", "session_end"]);
     expect(filtered[1]).toMatchObject({ tool: "read_file", callId: "c2" });

@@ -85,7 +85,7 @@ const replayed = replayer.replayTool("shell", { command: "npm test" });
 agent-replay record --out trace.jsonl --tool name [--args-json '{}'] [--result-json '{}']
 agent-replay replay trace.jsonl [--tool name --args-json '{}'] [--call-id id]
 agent-replay diff old.jsonl new.jsonl [--mode positional|semantic] [--format markdown|json]
-agent-replay filter trace.jsonl --out subset.jsonl [--tool name] [--call-id id] [--side-effect effect] [--ok true|false]
+agent-replay filter trace.jsonl --out subset.jsonl [--tool name] [--call-id id] [--side-effect effect] [--metadata key=value] [--ok true|false]
 agent-replay sanitize trace.jsonl --out public.jsonl [--allow-url-host github.com] [--format text|json]
 agent-replay assert trace.jsonl [--policy policy.json] [--must-call tool] [--must-not-call tool] [--max-shell-calls n]
 agent-replay test --baseline golden.jsonl --actual current.jsonl [--policy policy.json]
@@ -125,7 +125,7 @@ See [docs/trace-schema.md](docs/trace-schema.md) for the event model.
 
 Files ending in `.jsonl.gz` are read and written as gzip-compressed traces.
 
-`agent-replay filter` extracts matching tool interactions and keeps session boundary events so the output remains a reusable trace subset.
+`agent-replay filter` extracts matching tool interactions and keeps session boundary events so the output remains a reusable trace subset. It also supports simple metadata matching such as `--metadata framework=mcp` or `--metadata audit.retries=1`.
 
 ## Project status
 
