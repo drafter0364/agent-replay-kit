@@ -42,4 +42,5 @@
 - GitHub Action wrapper now supports passing CLI config files through `config-file`.
 - Validation reports now include skipped blank-line counts.
 - Analyze now warns about consecutive identical tool-call retry storms.
+- Added CLI flags for max duration, no-failed-tools, and must-end-ok assertions.
 - Clarified `model_message` usage in the README and positioned it as optional for replay.

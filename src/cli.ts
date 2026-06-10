@@ -41,7 +41,7 @@ Commands:
   diff old.jsonl new.jsonl [--mode positional|semantic] [--format markdown|json]
   filter trace.jsonl --out subset.jsonl [--tool name] [--call-id id] [--side-effect effect] [--metadata key=value] [--ok true|false] [--format text|json]
   sanitize trace.jsonl --out public.jsonl [--format text|json]
-  assert trace.jsonl [--policy policy.json] [--must-call tool] [--must-not-call tool] [--max-shell-calls n]
+  assert trace.jsonl [--policy policy.json] [--must-call tool] [--must-not-call tool] [--max-shell-calls n] [--max-duration-ms n] [--no-failed-tools] [--must-end-ok]
   test --baseline golden.jsonl --actual current.jsonl [--policy policy.json]
   validate trace.jsonl [--format markdown|json]
   inspect trace.jsonl [--format markdown|json]
@@ -243,6 +243,9 @@ async function runAssert(parsed: ParsedArgs, io: CliIo): Promise<number> {
     mustCall: optionListWithConfig(parsed, "must-call"),
     mustNotCall: optionListWithConfig(parsed, "must-not-call"),
     maxShellCalls: optionalNumberOptionWithConfig(parsed, "max-shell-calls"),
+    maxDurationMs: optionalNumberOptionWithConfig(parsed, "max-duration-ms"),
+    noFailedTools: optionalPresenceBooleanOptionWithConfig(parsed, "no-failed-tools"),
+    mustEndOk: optionalPresenceBooleanOptionWithConfig(parsed, "must-end-ok"),
     forbiddenCommands: optionListWithConfig(parsed, "forbid-command"),
     forbiddenCommandPrefixes: optionListWithConfig(parsed, "forbid-command-prefix"),
     forbiddenCommandPatterns: optionListWithConfig(parsed, "forbid-command-pattern")
@@ -443,6 +446,28 @@ function optionalBooleanOptionWithConfig(parsed: ParsedArgs, name: string): bool
   if (optionValue !== undefined) {
     return parseBooleanOptionValue(name, optionValue);
   }
+  const configValue = getConfigValue(parsed.config, name);
+  if (configValue === undefined) {
+    return undefined;
+  }
+  if (typeof configValue === "boolean") {
+    return configValue;
+  }
+  if (typeof configValue === "string") {
+    return parseBooleanOptionValue(name, configValue);
+  }
+  throw new Error(`--${name} in config file must be true or false`);
+}
+
+function optionalPresenceBooleanOptionWithConfig(parsed: ParsedArgs, name: string): boolean | undefined {
+  const optionValue = parsed.options[name];
+  if (optionValue === true) {
+    return true;
+  }
+  if (Array.isArray(optionValue)) {
+    return parseBooleanOptionValue(name, optionValue[0]!);
+  }
+
   const configValue = getConfigValue(parsed.config, name);
   if (configValue === undefined) {
     return undefined;

@@ -216,6 +216,31 @@ describe("CLI", () => {
     });
   });
 
+  it("supports assertion contract flags from the CLI", async () => {
+    await withTempDir(async (dir) => {
+      const tracePath = join(dir, "trace.jsonl");
+      const io = { stdout: (_text: string) => undefined, stderr: (_text: string) => undefined };
+
+      await import("node:fs/promises").then(({ writeFile }) =>
+        writeFile(
+          tracePath,
+          [
+            "{\"type\":\"session_start\",\"schemaVersion\":\"1.0\",\"sessionId\":\"s1\"}",
+            "{\"type\":\"tool_call\",\"callId\":\"c1\",\"tool\":\"shell\",\"args\":{\"command\":\"npm test\"}}",
+            "{\"type\":\"tool_result\",\"callId\":\"c1\",\"tool\":\"shell\",\"ok\":false,\"error\":{\"message\":\"failed\"},\"durationMs\":250}",
+            "{\"type\":\"session_end\",\"ok\":false}"
+          ].join("\n") + "\n",
+          "utf8"
+        )
+      );
+
+      await expect(runCli(["assert", tracePath, "--max-duration-ms", "300"], io)).resolves.toBe(0);
+      await expect(runCli(["assert", tracePath, "--max-duration-ms", "100"], io)).resolves.toBe(1);
+      await expect(runCli(["assert", tracePath, "--no-failed-tools"], io)).resolves.toBe(1);
+      await expect(runCli(["assert", tracePath, "--must-end-ok"], io)).resolves.toBe(1);
+    });
+  });
+
   it("loads command options from a config file and lets CLI flags override them", async () => {
     await withTempDir(async (dir) => {
       const tracePath = join(dir, "trace.jsonl");
