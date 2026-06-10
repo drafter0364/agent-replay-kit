@@ -262,6 +262,25 @@ describe("CLI", () => {
     });
   });
 
+  it("includes skipped blank lines in validation json output", async () => {
+    await withTempDir(async (dir) => {
+      const tracePath = join(dir, "trace.jsonl");
+      const output: string[] = [];
+      const io = { stdout: (text: string) => output.push(text), stderr: (text: string) => output.push(text) };
+
+      await import("node:fs/promises").then(({ writeFile }) =>
+        writeFile(
+          tracePath,
+          ["", "{\"type\":\"session_start\",\"schemaVersion\":\"1.0\",\"sessionId\":\"s1\"}", "", "{\"type\":\"session_end\",\"ok\":true}"].join("\n"),
+          "utf8"
+        )
+      );
+
+      await expect(runCli(["validate", tracePath, "--format", "json"], io)).resolves.toBe(0);
+      expect(output.join("")).toContain("\"skippedBlankLines\": 2");
+    });
+  });
+
   it("validates gzip trace files from the CLI", async () => {
     await withTempDir(async (dir) => {
       const tracePath = join(dir, "trace.jsonl.gz");

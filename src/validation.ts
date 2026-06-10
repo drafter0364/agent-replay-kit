@@ -10,6 +10,7 @@ export interface ValidateTraceTextOptions {
 
 export interface ParsedTraceValidationReport extends TraceValidationReport {
   events: TraceEvent[];
+  skippedBlankLines: number;
 }
 
 export async function validateTraceFile(
@@ -20,17 +21,19 @@ export async function validateTraceFile(
   const events: TraceEvent[] = [];
   const maxLineLength = options.maxLineLength ?? DEFAULT_MAX_TRACE_LINE_LENGTH;
   let lineNumber = 0;
+  let skippedBlankLines = 0;
 
   try {
     for await (const line of readTraceLines(filePath)) {
       lineNumber += 1;
-      validateLine(line, lineNumber, maxLineLength, diagnostics, events);
+      skippedBlankLines += validateLine(line, lineNumber, maxLineLength, diagnostics, events);
     }
   } catch (error) {
     return {
       ok: false,
       eventCount: events.length,
       events,
+      skippedBlankLines,
       diagnostics: [
         {
           code: "trace-file-read-error",
@@ -46,6 +49,7 @@ export async function validateTraceFile(
     ok: diagnostics.length === 0,
     eventCount: events.length,
     events,
+    skippedBlankLines,
     diagnostics
   };
 }
@@ -54,9 +58,10 @@ export function validateTraceText(raw: string, options: ValidateTraceTextOptions
   const diagnostics: TraceDiagnostic[] = [];
   const events: TraceEvent[] = [];
   const maxLineLength = options.maxLineLength ?? DEFAULT_MAX_TRACE_LINE_LENGTH;
+  let skippedBlankLines = 0;
 
   raw.split(/\r?\n/).forEach((line, index) => {
-    validateLine(line, index + 1, maxLineLength, diagnostics, events);
+    skippedBlankLines += validateLine(line, index + 1, maxLineLength, diagnostics, events);
   });
 
   const traceValidation = validateTrace(events);
@@ -66,6 +71,7 @@ export function validateTraceText(raw: string, options: ValidateTraceTextOptions
     ok: diagnostics.length === 0,
     eventCount: events.length,
     events,
+    skippedBlankLines,
     diagnostics
   };
 }
@@ -90,10 +96,10 @@ function validateLine(
   maxLineLength: number,
   diagnostics: TraceDiagnostic[],
   events: TraceEvent[]
-): void {
+): number {
   const line = rawLine.trim();
   if (line.length === 0) {
-    return;
+    return 1;
   }
 
   if (line.length > maxLineLength) {
@@ -102,7 +108,7 @@ function validateLine(
       line: lineNumber,
       message: `Trace line ${lineNumber} exceeds max length ${maxLineLength}`
     });
-    return;
+    return 0;
   }
 
   let parsed: unknown;
@@ -114,7 +120,7 @@ function validateLine(
       line: lineNumber,
       message: `Invalid JSON on trace line ${lineNumber}: ${error instanceof Error ? error.message : String(error)}`
     });
-    return;
+    return 0;
   }
 
   const eventValidation = validateTraceEvent(parsed);
@@ -126,10 +132,11 @@ function validateLine(
         message
       });
     }
-    return;
+    return 0;
   }
 
   events.push(parsed as TraceEvent);
+  return 0;
 }
 
 export function validateTrace(events: TraceEvent[]): TraceValidationReport {
@@ -297,6 +304,9 @@ export function validateTrace(events: TraceEvent[]): TraceValidationReport {
 
 export function renderTraceValidationMarkdown(report: TraceValidationReport): string {
   const lines = ["# Agent Trace Validation", "", `Status: ${report.ok ? "pass" : "fail"}`, `Events: ${report.eventCount}`];
+  if ("skippedBlankLines" in report && typeof report.skippedBlankLines === "number") {
+    lines.push(`Skipped blank lines: ${report.skippedBlankLines}`);
+  }
 
   if (report.diagnostics.length > 0) {
     lines.push("", "## Diagnostics");

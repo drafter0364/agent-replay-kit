@@ -46,6 +46,18 @@ describe("trace validation", () => {
     expect(report.ok).toBe(false);
     expect(report.diagnostics.map((diagnostic) => diagnostic.code)).toContain("trace-line-invalid-json");
     expect(report.eventCount).toBe(1);
+    expect(report.skippedBlankLines).toBe(0);
+  });
+
+  it("tracks skipped blank lines in parsed reports", () => {
+    const report = validateTraceText(
+      "\n{\"type\":\"session_start\",\"schemaVersion\":\"1.0\",\"sessionId\":\"s1\"}\n \n{\"type\":\"session_end\",\"ok\":true}\n"
+    );
+
+    expect(report.ok).toBe(true);
+    expect(report.eventCount).toBe(2);
+    expect(report.skippedBlankLines).toBe(3);
+    expect(renderTraceValidationMarkdown(report)).toContain("Skipped blank lines: 3");
   });
 
   it("validates gzip trace files through the file API", async () => {
@@ -62,6 +74,7 @@ describe("trace validation", () => {
 
       expect(report.ok).toBe(true);
       expect(report.eventCount).toBe(4);
+      expect(report.skippedBlankLines).toBe(0);
       expect(report.events.map((event) => event.type)).toEqual(["session_start", "tool_call", "tool_result", "session_end"]);
     });
   });
