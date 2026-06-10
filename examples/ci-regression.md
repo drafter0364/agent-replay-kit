@@ -16,6 +16,12 @@ The same policy can be stored in JSON:
 agent-replay assert examples/traces/sample.jsonl --policy examples/agent-replay.policy.json
 ```
 
+Or passed through the generic config-file entry point:
+
+```bash
+agent-replay assert examples/traces/sample.jsonl --config-file examples/agent-replay.policy.json
+```
+
 Compare a current run against a golden trace:
 
 ```bash

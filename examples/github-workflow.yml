@@ -18,6 +18,7 @@ jobs:
           mode: validate-and-assert
           trace: examples/traces/sample.jsonl
           policy: examples/agent-replay.policy.json
+          config-file: examples/agent-replay.policy.json
       - uses: drafter0364/agent-replay-kit@main
         with:
           mode: analyze

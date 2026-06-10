@@ -12,6 +12,9 @@ inputs:
   policy:
     description: Optional assertion policy JSON file.
     required: false
+  config-file:
+    description: Optional flat JSON config file passed through to the CLI command.
+    required: false
   baseline:
     description: Baseline trace for test mode.
     required: false
@@ -51,6 +54,7 @@ runs:
         AGENT_REPLAY_MODE: ${{ inputs.mode }}
         AGENT_REPLAY_TRACE: ${{ inputs.trace }}
         AGENT_REPLAY_POLICY: ${{ inputs.policy }}
+        AGENT_REPLAY_CONFIG_FILE: ${{ inputs.config-file }}
         AGENT_REPLAY_BASELINE: ${{ inputs.baseline }}
         AGENT_REPLAY_ACTUAL: ${{ inputs.actual }}
         AGENT_REPLAY_FORMAT: ${{ inputs.format }}
@@ -64,6 +68,11 @@ runs:
           policy_args=(--policy "${AGENT_REPLAY_POLICY}")
         fi
 
+        config_args=()
+        if [[ -n "${AGENT_REPLAY_CONFIG_FILE}" ]]; then
+          config_args=(--config-file "${AGENT_REPLAY_CONFIG_FILE}")
+        fi
+
         analyze_args=()
         if [[ -n "${AGENT_REPLAY_MAX_SHELL_CALLS}" ]]; then
           analyze_args=(--max-shell-calls "${AGENT_REPLAY_MAX_SHELL_CALLS}")
@@ -71,20 +80,20 @@ runs:
 
         case "${AGENT_REPLAY_MODE}" in
           validate)
-            node "${AGENT_REPLAY_CLI}" validate "${AGENT_REPLAY_TRACE}" --format "${AGENT_REPLAY_FORMAT}"
+            node "${AGENT_REPLAY_CLI}" validate "${AGENT_REPLAY_TRACE}" "${config_args[@]}" --format "${AGENT_REPLAY_FORMAT}"
             ;;
           assert)
-            node "${AGENT_REPLAY_CLI}" assert "${AGENT_REPLAY_TRACE}" "${policy_args[@]}" --format "${AGENT_REPLAY_FORMAT}"
+            node "${AGENT_REPLAY_CLI}" assert "${AGENT_REPLAY_TRACE}" "${config_args[@]}" "${policy_args[@]}" --format "${AGENT_REPLAY_FORMAT}"
             ;;
           analyze)
-            node "${AGENT_REPLAY_CLI}" analyze "${AGENT_REPLAY_TRACE}" "${analyze_args[@]}" --format "${AGENT_REPLAY_FORMAT}"
+            node "${AGENT_REPLAY_CLI}" analyze "${AGENT_REPLAY_TRACE}" "${config_args[@]}" "${analyze_args[@]}" --format "${AGENT_REPLAY_FORMAT}"
             ;;
           validate-and-assert)
-            node "${AGENT_REPLAY_CLI}" validate "${AGENT_REPLAY_TRACE}" --format "${AGENT_REPLAY_FORMAT}"
-            node "${AGENT_REPLAY_CLI}" assert "${AGENT_REPLAY_TRACE}" "${policy_args[@]}" --format "${AGENT_REPLAY_FORMAT}"
+            node "${AGENT_REPLAY_CLI}" validate "${AGENT_REPLAY_TRACE}" "${config_args[@]}" --format "${AGENT_REPLAY_FORMAT}"
+            node "${AGENT_REPLAY_CLI}" assert "${AGENT_REPLAY_TRACE}" "${config_args[@]}" "${policy_args[@]}" --format "${AGENT_REPLAY_FORMAT}"
             ;;
           test)
-            node "${AGENT_REPLAY_CLI}" test --baseline "${AGENT_REPLAY_BASELINE}" --actual "${AGENT_REPLAY_ACTUAL}" "${policy_args[@]}" --format "${AGENT_REPLAY_FORMAT}"
+            node "${AGENT_REPLAY_CLI}" test --baseline "${AGENT_REPLAY_BASELINE}" --actual "${AGENT_REPLAY_ACTUAL}" "${config_args[@]}" "${policy_args[@]}" --format "${AGENT_REPLAY_FORMAT}"
             ;;
           *)
             echo "Unsupported mode: ${AGENT_REPLAY_MODE}" >&2

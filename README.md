@@ -108,9 +108,12 @@ Most commands also accept `--config-file config.json`. The file is a flat JSON o
     mode: validate-and-assert
     trace: traces/latest.jsonl
     policy: agent-replay.policy.json
+    config-file: .agent-replay/assert.json
 ```
 
 Supported modes are `validate`, `assert`, `analyze`, `validate-and-assert`, and `test`.
+
+The action also accepts `config-file`, which is passed through to the underlying CLI command in the same way as `--config-file`.
 
 ## Trace format
 
