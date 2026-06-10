@@ -102,4 +102,23 @@ describe("TraceRecorder", () => {
       );
     });
   });
+
+  it("rejects invalid event payloads before writing them", async () => {
+    await withTempDir(async (dir) => {
+      const tracePath = join(dir, "trace.jsonl");
+      const recorder = createRecorder(tracePath);
+
+      await recorder.start();
+      await expect(recorder.modelMessage({ role: "narrator" as never, content: "bad role" })).rejects.toThrow(
+        "model_message.role must be system, user, assistant, or tool"
+      );
+      await expect(recorder.toolCall("shell", undefined as never)).rejects.toThrow("tool_call.args is required");
+      await expect(recorder.end({ metadata: [] as never })).rejects.toThrow("event.metadata must be an object");
+      await recorder.end({ ok: true });
+
+      const events = await readTraceFile(tracePath);
+      expect(events.map((event) => event.type)).toEqual(["session_start", "session_end"]);
+      expect(events.map((event) => event.seq)).toEqual([1, 2]);
+    });
+  });
 });

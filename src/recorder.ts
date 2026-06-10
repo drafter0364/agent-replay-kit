@@ -1,4 +1,5 @@
 import { appendTraceEvent } from "./io.js";
+import { assertTraceEvent } from "./schema.js";
 import type {
   JsonObject,
   JsonValue,
@@ -137,11 +138,12 @@ export class TraceRecorder {
 
   private async write<T extends TraceEvent>(event: Omit<T, "seq" | "timestamp"> & Partial<Pick<T, "seq" | "timestamp">>): Promise<T> {
     const nextSeq = this.seq + 1;
-    const fullEvent = {
+    const fullEvent = normalizeEvent({
       ...event,
       seq: nextSeq,
       timestamp: nowIso()
-    } as T;
+    } as T);
+    assertTraceEvent(fullEvent);
     await appendTraceEvent(this.filePath, fullEvent);
     this.seq = nextSeq;
     return fullEvent;
@@ -176,6 +178,10 @@ function validateRecorderOptions(options: RecorderOptions): void {
       throw new Error("RecorderOptions.metadata must be a JSON object");
     }
   }
+}
+
+function normalizeEvent<T extends TraceEvent>(event: T): T {
+  return JSON.parse(JSON.stringify(event)) as T;
 }
 
 function serializeError(error: unknown): { name?: string; message: string; stack?: string } {
